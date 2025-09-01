@@ -4,17 +4,18 @@ import (
 	"errors"
 	"fmt"
 	"image"
+	"image/draw"
 	"path"
 	"strconv"
 	"time"
 
-	vidio "github.com/AlexEidt/Vidio"
 	"github.com/Krzysztofz01/video-lightning-detector/internal/frame"
 	"github.com/Krzysztofz01/video-lightning-detector/internal/render"
 	"github.com/Krzysztofz01/video-lightning-detector/internal/utils"
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
 	"github.com/go-echarts/go-echarts/v2/types"
+	gocv "gocv.io/x/gocv"
 )
 
 // Detector instance that is able to perform a search after ligntning strikes on a video file.
@@ -96,30 +97,49 @@ func (detector *detector) performVideoAnalysis(inputVideoPath string) (*frame.Fr
 	videoAnalysisTime := time.Now()
 	detector.renderer.LogDebug("Starting the video analysis stage.")
 
-	video, err := vidio.NewVideo(inputVideoPath)
+	video, err := gocv.VideoCaptureFile(inputVideoPath)
 	if err != nil {
 		return nil, fmt.Errorf("detector: failed to open the video file for the analysis stage: %w", err)
 	}
 
 	defer video.Close()
 
-	targetWidth := int(float64(video.Width()) * detector.options.FrameScalingFactor)
-	targetHeight := int(float64(video.Height()) * detector.options.FrameScalingFactor)
+	frameWidth := int(video.Get(gocv.VideoCaptureFrameWidth))
+	frameHeight := int(video.Get(gocv.VideoCaptureFrameHeight))
 
-	frameCurrentBuffer := image.NewRGBA(image.Rect(0, 0, video.Width(), video.Height()))
-	video.SetFrameBuffer(frameCurrentBuffer.Pix)
+	targetWidth := int(float64(frameWidth) * detector.options.FrameScalingFactor)
+	targetHeight := int(float64(frameHeight) * detector.options.FrameScalingFactor)
 
 	frameCurrent := image.NewRGBA(image.Rect(0, 0, targetWidth, targetHeight))
 	framePrevious := image.NewRGBA(image.Rect(0, 0, targetWidth, targetHeight))
 
 	frameNumber := 1
-	frameCount := video.Frames()
+	frameCount := int(video.Get(gocv.VideoCaptureFrameCount))
 	frames := frame.CreateNewFramesCollection(frameCount)
 
 	progressBarStep, progressBarClose := detector.renderer.Progress("Video analysis stage.", frameCount)
 
-	for video.Read() {
-		if utils.ScaleImage(frameCurrentBuffer, frameCurrent, detector.options.FrameScalingFactor); err != nil {
+	imgMat := gocv.NewMat()
+	defer imgMat.Close()
+
+	for {
+		if ok := video.Read(&imgMat); !ok || imgMat.Empty() {
+			break
+		}
+
+		img, err := imgMat.ToImage()
+		if err != nil {
+			return nil, fmt.Errorf("detector: failed to convert frame to image: %w", err)
+		}
+
+		src, ok := img.(*image.RGBA)
+		if !ok {
+			temp := image.NewRGBA(img.Bounds())
+			draw.Draw(temp, temp.Bounds(), img, img.Bounds().Min, draw.Src)
+			src = temp
+		}
+
+		if err := utils.ScaleImage(src, frameCurrent, detector.options.FrameScalingFactor); err != nil {
 			return nil, fmt.Errorf("detector: failed to scale the current frame image on the analyze stage: %w", err)
 		}
 
@@ -285,32 +305,42 @@ func (detector *detector) performFramesExport(inputVideoPath, outputDirectoryPat
 	detector.renderer.LogDebug("Starting the frames export stage.")
 	detector.renderer.LogInfo("About to export %d frames.", len(detections))
 
-	video, err := vidio.NewVideo(inputVideoPath)
+	video, err := gocv.VideoCaptureFile(inputVideoPath)
 	if err != nil {
 		return fmt.Errorf("detector: failed to open the video file for the frames export stage: %w", err)
 	}
 
 	defer video.Close()
 
-	// TODO: Limit for large detections
-	frames, err := video.ReadFrames(detections...)
-	if err != nil {
-		return fmt.Errorf("detector: failed to read the specified frames from the video: %w", err)
-	}
+	frameCount := int(video.Get(gocv.VideoCaptureFrameCount))
 
 	progressBarStep, progressBarClose := detector.renderer.Progress("Video frames export stage.", len(detections))
 
-	for index, frame := range frames {
-		frameIndex := detections[index]
+	imgMat := gocv.NewMat()
+	defer imgMat.Close()
+
+	for _, frameIndex := range detections {
+		if ok := video.Set(gocv.VideoCapturePosFrames, float64(frameIndex)); !ok {
+			return fmt.Errorf("detector: failed to seek to frame %d", frameIndex)
+		}
+
+		if ok := video.Read(&imgMat); !ok || imgMat.Empty() {
+			return fmt.Errorf("detector: failed to read the specified frame %d from the video", frameIndex)
+		}
+
+		img, err := imgMat.ToImage()
+		if err != nil {
+			return fmt.Errorf("detector: failed to convert frame %d to image: %w", frameIndex, err)
+		}
 
 		frameImageName := fmt.Sprintf("frame-%d.png", frameIndex+1)
 		frameImagePath := path.Join(outputDirectoryPath, frameImageName)
-		if err := utils.ExportImageAsPng(frameImagePath, frame); err != nil {
+		if err := utils.ExportImageAsPng(frameImagePath, img); err != nil {
 			return fmt.Errorf("detector: failed to export the frame image: %w", err)
 		}
 
 		progressBarStep()
-		detector.renderer.LogInfo("Frame: [%d/%d]. Frame image exported at: %s", frameIndex+1, video.Frames(), frameImagePath)
+		detector.renderer.LogInfo("Frame: [%d/%d]. Frame image exported at: %s", frameIndex+1, frameCount, frameImagePath)
 	}
 
 	progressBarClose()

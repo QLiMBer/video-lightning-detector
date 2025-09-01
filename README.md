@@ -24,7 +24,7 @@ Required software:
 - **[git](https://git-scm.com/)** - Used to download the source code from the repository.
 - **[task](https://taskfile.dev/)** - Used as the main build tool. (This one is optional, the program can be built "manually")
 - **[go (version: 1.20+)](https://go.dev/)** - Used to compile the source code locally.
-- **[ffmpeg](https://ffmpeg.org/)** - Used by the program for frame extraction.
+- **[OpenCV](https://opencv.org/) via [gocv](https://gocv.io/)** - Provides video decoding capabilities.
 
 Installation (Linux, Windows and MacOS):
 ```sh
@@ -35,8 +35,8 @@ cd video-lightning-detector
 task build
 ```
 
-## Manuall self‑contained setup (no Task and system Go/ffmpeg needed)
-The steps below reproduce exactly how this fork was prepared and tested locally: clone via SSH, install a project‑local Go toolchain and ffmpeg binaries inside the repo, build the binary, and run the detector.
+## Manuall self‑contained setup (no Task and system Go/OpenCV needed)
+The steps below reproduce exactly how this fork was prepared and tested locally: clone via SSH, install a project‑local Go toolchain and OpenCV libraries inside the repo, build the binary, and run the detector.
 
 1) Clone via SSH
 ```sh
@@ -45,7 +45,7 @@ git clone git@github.com:QLiMBer/video-lightning-detector.git
 cd video-lightning-detector
 ```
 
-2) Install project‑local tooling (Go 1.22.5 and static ffmpeg)
+2) Install project‑local tooling (Go 1.22.5 and OpenCV)
 ```sh
 # Create a tooling directory inside the repo
 mkdir -p .tooling
@@ -58,26 +58,19 @@ mv .tooling/go ".tooling/go-${GO_VER}"
 ln -sfn "go-${GO_VER}" .tooling/go
 rm -f go.tar.gz
 
-# Install static ffmpeg + ffprobe locally (Linux x86_64)
-mkdir -p .tooling/ffmpeg-tmp
-curl -fsSL -o ffmpeg.tar.xz https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz
-tar -C .tooling/ffmpeg-tmp -xJf ffmpeg.tar.xz
-FF_DIR=$(find .tooling/ffmpeg-tmp -maxdepth 1 -type d -name 'ffmpeg-*static' | head -n 1)
-mkdir -p .tooling/ffmpeg
-cp -f "$FF_DIR/ffmpeg" "$FF_DIR/ffprobe" .tooling/ffmpeg/
-rm -rf .tooling/ffmpeg-tmp ffmpeg.tar.xz
+# Install OpenCV (required by gocv). See https://gocv.io/getting-started/ for platform-specific steps.
 
 # Create an environment helper to use the local tools
 cat > env.sh << 'EOF'
-# Source this file to use the project-local Go and ffmpeg
+# Source this file to use the project-local Go and OpenCV
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export PATH="$PROJECT_ROOT/.tooling/go/bin:$PROJECT_ROOT/.tooling/ffmpeg:$PATH"
+export PATH="$PROJECT_ROOT/.tooling/go/bin:$PATH"
 EOF
 chmod +x env.sh
 
 # Activate local tools and verify
 source ./env.sh
-which go && which ffmpeg && which ffprobe
+which go
 ```
 
 3) Build the detector

@@ -1,9 +1,10 @@
 module github.com/Krzysztofz01/video-lightning-detector
 
-go 1.20
+go 1.21
+
+toolchain go1.22.12
 
 require (
-	github.com/AlexEidt/Vidio v1.5.0
 	github.com/Krzysztofz01/pimit v0.2.0
 	github.com/esimov/stackblur-go v1.1.0
 	github.com/go-echarts/go-echarts/v2 v2.3.1
@@ -11,6 +12,7 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/atomic v1.11.0
+	gocv.io/x/gocv v0.39.0
 	golang.org/x/image v0.11.0
 )
 
