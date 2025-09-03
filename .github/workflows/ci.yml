@@ -97,8 +97,13 @@ jobs:
       - name: Smoke test (sample video)
         if: steps.changes.outputs.code == 'true' || steps.changes.outputs.samples == 'true' || steps.changes.outputs.workflows == 'true'
         run: |
-          ./bin/video-lightning-detector \
-            -i "resources/samples/sample 0.mp4" \
-            -o ./runs/ci \
-            -a -s 0.1 -f
-          echo "✅ Smoke test completed (execution and I/O paths OK)" >> $GITHUB_STEP_SUMMARY
+          set -euo pipefail
+          SAMPLE="resources/samples/sample 0.mp4"
+          if [ ! -f "$SAMPLE" ]; then
+            echo "Sample not found ($SAMPLE). Generating synthetic clip for smoke test..." | tee -a $GITHUB_STEP_SUMMARY
+            mkdir -p resources/samples
+            ffmpeg -hide_banner -loglevel error -f lavfi -i color=c=black:s=320x180:d=1 -r 10 -y resources/samples/ci-synthetic.mp4
+            SAMPLE="resources/samples/ci-synthetic.mp4"
+          fi
+          ./bin/video-lightning-detector -i "$SAMPLE" -o ./runs/ci -a -s 0.1 -f
+          echo "✅ Smoke test completed (execution and I/O paths OK) using: $SAMPLE" >> $GITHUB_STEP_SUMMARY
