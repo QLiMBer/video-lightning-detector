@@ -2,6 +2,10 @@
 
 Purpose: keep `main` always releasable, iterate fast on branches, and make changes safe, reviewable, and repeatable.
 
+## Current Status
+- CI present at `.github/workflows/ci.yml` with job `build-test` and docs‑only optimization.
+- `main` and `next` are protected and currently aligned; required checks enforced.
+
 ## Branching Model
 - `main`: protected, green, releasable.
 - `next`: integration for refactors/migrations; merge to `main` when stable.
@@ -16,6 +20,7 @@ Purpose: keep `main` always releasable, iterate fast on branches, and make chang
 ## CI Expectations
 - Setup Go + ffmpeg. Jobs: `go fmt -l` (fail if diffs), `go vet`, build, `go test -race -coverprofile`.
 - Upload coverage HTML; optionally nightly or manual bench to publish `cpu.prof`/`mem.prof`.
+- Optimized: docs-only changes skip heavy CI steps (Go setup, ffmpeg, build/test).
 
 ## Releases
 - SemVer; tag on `main`. Automate GitHub Releases and binaries later (e.g., GoReleaser).
@@ -28,19 +33,23 @@ Purpose: keep `main` always releasable, iterate fast on branches, and make chang
 
 ## Samples & Tests
 - Keep samples small under `resources/samples/`. Consider a CI smoke test against a tiny clip.
+  - CI smoke test is implemented using `resources/samples/sample 0.mp4` with `-a -s 0.1 -f` to keep runtime low. Purpose: environment/runtime check, not functional assertions.
+  - Functional detection tests (positive/negative) planned — see docs/ROADMAP.md.
 
 ## Roadmap & Progress (update as we go)
 - [x] Document workflow in repo
-- [ ] Protect `main` branch (GitHub settings)
-- [ ] Create/protect `next` integration branch
+- [x] Protect `main` branch (GitHub settings)
+- [x] Create/protect `next` integration branch
 - [x] Add CI workflow (lint/vet/build/test/coverage)
 - [x] Add PR template (checklist + risk/rollback)
 - [x] Add CODEOWNERS
 - [x] Enable Dependabot (gomod, actions)
-- [ ] Add CI smoke test using a sample video
+- [x] Add CI smoke test using a sample video
 - [ ] Add release automation (tags → release, optional GoReleaser)
 - [ ] Add bench workflow (manual trigger)
-- [ ] Require status checks on PRs (GitHub settings)
+- [x] Require status checks on PRs (GitHub settings)
+
+See docs/ROADMAP.md for planned enhancements and future work.
 
 ---
 
@@ -64,6 +73,11 @@ How to set up in GitHub UI:
    - Include administrators (recommended)
 
 Result: only PRs with green CI and at least one approval can merge; the PR branch must be rebased/merged to be up‑to‑date with the target branch.
+
+Notes for Rulesets UI (gotchas):
+- Status checks search: the required checks list appears only after you start typing; type "build-test" to select the CI job from `.github/workflows/ci.yml`.
+- Syncing `main` and `next`: if protections block updates, temporarily remove `next` from the ruleset (or delete and recreate it) to align branches, then re‑enable protections.
+- Forks view: when opening PRs, ensure the base repository is your fork (not the upstream) before selecting base branch.
 
 ### Draft PRs and Checklists
 Open PRs as Draft to signal “work in progress” and avoid premature reviews. Convert to “Ready for review” when the checklist below is satisfied.
@@ -103,7 +117,7 @@ Typical jobs (Linux runner):
 - Test: `go test -race -coverprofile coverage.out ./...` then `go tool cover -html=coverage.out` as an artifact.
 - ffmpeg: use a prebuilt setup action for speed (e.g., `FedericoCarboni/setup-ffmpeg@v3` with `version: latest`).
 
-Example GitHub Actions skeleton:
+Example GitHub Actions skeleton (matches our `.github/workflows/ci.yml` job `build-test`):
 ```
 name: CI
 on:

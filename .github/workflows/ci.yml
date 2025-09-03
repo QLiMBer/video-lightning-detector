@@ -33,17 +33,23 @@ jobs:
             docs:
               - '**/*.md'
               - 'docs/**'
+            samples:
               - 'resources/samples/**'
+            workflows:
+              - '.github/workflows/**'
 
       - name: Summary
         run: |
-          echo "code changes: ${{ steps.changes.outputs.code }}" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ steps.changes.outputs.code }}" != "true" ]; then
-            echo "Docs-only or non-code change detected; skipping heavy steps." >> $GITHUB_STEP_SUMMARY
+          echo "code:      ${{ steps.changes.outputs.code }}" >> $GITHUB_STEP_SUMMARY
+          echo "docs:      ${{ steps.changes.outputs.docs }}" >> $GITHUB_STEP_SUMMARY
+          echo "samples:   ${{ steps.changes.outputs.samples }}" >> $GITHUB_STEP_SUMMARY
+          echo "workflows: ${{ steps.changes.outputs.workflows }}" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.changes.outputs.code }}" != "true" ] && [ "${{ steps.changes.outputs.samples }}" != "true" ] && [ "${{ steps.changes.outputs.workflows }}" != "true" ]; then
+            echo "Docs-only or non-executable change detected; skipping heavy steps." >> $GITHUB_STEP_SUMMARY
           fi
 
       - name: Setup Go
-        if: steps.changes.outputs.code == 'true'
+        if: steps.changes.outputs.code == 'true' || steps.changes.outputs.samples == 'true' || steps.changes.outputs.workflows == 'true'
         uses: actions/setup-go@v5
         with:
           go-version: '1.22.x'
@@ -56,7 +62,7 @@ jobs:
           version: latest
 
       - name: Format check
-        if: steps.changes.outputs.code == 'true'
+        if: steps.changes.outputs.code == 'true' || steps.changes.outputs.samples == 'true' || steps.changes.outputs.workflows == 'true'
         run: |
           diff_files=$(go fmt ./...)
           if [ -n "$diff_files" ]; then
@@ -64,24 +70,51 @@ jobs:
           fi
 
       - name: Vet
-        if: steps.changes.outputs.code == 'true'
+        if: steps.changes.outputs.code == 'true' || steps.changes.outputs.samples == 'true' || steps.changes.outputs.workflows == 'true'
         run: go vet ./...
 
       - name: Build
-        if: steps.changes.outputs.code == 'true'
+        if: steps.changes.outputs.code == 'true' || steps.changes.outputs.samples == 'true' || steps.changes.outputs.workflows == 'true'
         run: go build ./...
 
+      - name: Build CLI binary
+        if: steps.changes.outputs.code == 'true' || steps.changes.outputs.samples == 'true' || steps.changes.outputs.workflows == 'true'
+        run: go build -v -o bin/video-lightning-detector .
+
       - name: Test
-        if: steps.changes.outputs.code == 'true'
+        if: steps.changes.outputs.code == 'true' || steps.changes.outputs.samples == 'true' || steps.changes.outputs.workflows == 'true'
         run: go test -race -coverprofile coverage.out ./...
 
-      - name: Coverage HTML
+      - name: Smoke test (sample video)
         if: steps.changes.outputs.code == 'true'
+        run: |
+          ./bin/video-lightning-detector \
+            -i "resources/samples/sample 0.mp4" \
+            -o ./runs/ci \
+            -a -s 0.1 -f
+          echo "✅ Smoke test completed (execution and I/O paths OK)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Coverage HTML
+        if: steps.changes.outputs.code == 'true' || steps.changes.outputs.samples == 'true' || steps.changes.outputs.workflows == 'true'
         run: go tool cover -html=coverage.out -o coverage.html
 
       - name: Upload coverage
         uses: actions/upload-artifact@v4
-        if: steps.changes.outputs.code == 'true'
+        if: steps.changes.outputs.code == 'true' || steps.changes.outputs.samples == 'true' || steps.changes.outputs.workflows == 'true'
         with:
           name: coverage
           path: coverage.html
+
+      - name: Smoke test (sample video)
+        if: steps.changes.outputs.code == 'true' || steps.changes.outputs.samples == 'true' || steps.changes.outputs.workflows == 'true'
+        run: |
+          set -euo pipefail
+          SAMPLE="resources/samples/sample 0.mp4"
+          if [ ! -f "$SAMPLE" ]; then
+            echo "Sample not found ($SAMPLE). Generating synthetic clip for smoke test..." | tee -a $GITHUB_STEP_SUMMARY
+            mkdir -p resources/samples
+            ffmpeg -hide_banner -loglevel error -f lavfi -i color=c=black:s=320x180:d=1 -r 10 -y resources/samples/ci-synthetic.mp4
+            SAMPLE="resources/samples/ci-synthetic.mp4"
+          fi
+          ./bin/video-lightning-detector -i "$SAMPLE" -o ./runs/ci -a -s 0.1 -f
+          echo "✅ Smoke test completed (execution and I/O paths OK) using: $SAMPLE" >> $GITHUB_STEP_SUMMARY
