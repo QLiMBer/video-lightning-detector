@@ -32,7 +32,7 @@ Purpose: keep `main` always releasable, iterate fast on branches, and make chang
 - CODEOWNERS, PR template with checklist, Dependabot (Go modules, Actions), branch protection rules.
 
 ## Samples & Tests
-- Keep samples small under `resources/samples/`. Consider a CI smoke test against a tiny clip.
+- Keep samples small under `resources/samples/`.
 - CI functional assertions only: run detector on `resources/samples/sample_yes.mp4` (expects >0) and `resources/samples/sample_no.mp4` (expects 0). Assertions parse the info log line `Frame meets the threshold requirements.`; frame export is skipped with `-f` for speed. No separate smoke step.
 
 ## Roadmap & Progress (update as we go)
@@ -176,9 +176,8 @@ Checklist
 ```
 - Dependabot (`.github/dependabot.yml`): weekly updates for `gomod` and `github-actions`.
 
-### Samples & CI Smoke Test
-- Keep bundled samples small. For CI, run the detector on a very short clip with `-s 0.1` and skip exporting frames (`-f`) to save time.
-- Example smoke step: `./bin/video-lightning-detector -i "resources/samples/sample 3.mp4" -o ./runs/ci -a -s 0.1 -f`
+### Samples & Functional Assertions
+- CI uses tiny bundled samples. Assertions run on `sample_yes.mp4` and `sample_no.mp4` with `-s 0.1 -f` for speed.
 
 ### Codex Branches Policy
 - Create as `codex/<topic>` and target `next` for large changes.
