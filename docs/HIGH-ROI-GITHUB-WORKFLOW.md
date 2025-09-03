@@ -33,8 +33,7 @@ Purpose: keep `main` always releasable, iterate fast on branches, and make chang
 
 ## Samples & Tests
 - Keep samples small under `resources/samples/`. Consider a CI smoke test against a tiny clip.
-  - CI smoke test uses `resources/samples/sample 0.mp4` with `-a -s 0.1 -f` to keep runtime low. Purpose: environment/runtime check.
-  - Functional detection assertions: run detector on `resources/samples/sample_yes.mp4` (expects >0 detections) and `resources/samples/sample_no.mp4` (expects 0). Assertions parse the count by matching the per-detection info log line `Frame meets the threshold requirements.`; frame export is skipped with `-f` for speed.
+- CI functional assertions only: run detector on `resources/samples/sample_yes.mp4` (expects >0) and `resources/samples/sample_no.mp4` (expects 0). Assertions parse the info log line `Frame meets the threshold requirements.`; frame export is skipped with `-f` for speed. No separate smoke step.
 
 ## Roadmap & Progress (update as we go)
 - [x] Document workflow in repo

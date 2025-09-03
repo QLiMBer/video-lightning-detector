@@ -43,3 +43,6 @@ When opening a new terminal after a restart:
 - PRs: small, squash merge, title uses Conventional Commits (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`). Target `next` for large refactors; `main` for safe fixes.
 - CI (expected): `go fmt -l` clean, `go vet`, build, `go test -race -coverprofile`. ffmpeg must be available.
 - Samples: prefer `resources/samples/`; keep files small. For quick checks, see README “Daily Use → Quick test using bundled samples”.
+
+## Git Mentoring Convention
+- Do not use ellipses in commands or explanations. Always write complete names and paths.
