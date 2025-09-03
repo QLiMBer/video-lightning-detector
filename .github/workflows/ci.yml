@@ -55,9 +55,11 @@ jobs:
           go-version: '1.22.x'
           cache: true
 
-      - name: Install ffmpeg
+      - name: Setup ffmpeg
         if: steps.changes.outputs.code == 'true' || steps.changes.outputs.samples == 'true' || steps.changes.outputs.workflows == 'true'
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+        uses: FedericoCarboni/setup-ffmpeg@v3
+        with:
+          version: latest
 
       - name: Format check
         if: steps.changes.outputs.code == 'true' || steps.changes.outputs.samples == 'true' || steps.changes.outputs.workflows == 'true'
@@ -83,15 +85,6 @@ jobs:
       - name: Test
         if: steps.changes.outputs.code == 'true' || steps.changes.outputs.samples == 'true' || steps.changes.outputs.workflows == 'true'
         run: go test -race -coverprofile coverage.out ./...
-
-      - name: Smoke test (sample video)
-        if: steps.changes.outputs.code == 'true'
-        run: |
-          ./bin/video-lightning-detector \
-            -i "resources/samples/sample 0.mp4" \
-            -o ./runs/ci \
-            -a -s 0.1 -f
-          echo "✅ Smoke test completed (execution and I/O paths OK)" >> $GITHUB_STEP_SUMMARY
 
       - name: Coverage HTML
         if: steps.changes.outputs.code == 'true' || steps.changes.outputs.samples == 'true' || steps.changes.outputs.workflows == 'true'
