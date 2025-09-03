@@ -27,5 +27,4 @@ for f in *.mp4; do ffmpeg -i "$f" -c copy -an "noaudio_$f"; done
 - Keep files reasonably small to avoid bloating the repo; consider short clips or downscaled resolution.
 
 ## CI Usage
-- Smoke test: runs the detector against `sample 0.mp4` with `-a -s 0.1 -f` to verify runtime and I/O paths (synthetic fallback is generated if the file is missing).
-- Functional assertions: positive sample `sample_yes.mp4` must produce >0 detections; negative sample `sample_no.mp4` must produce 0 detections. CI parses detections by counting occurrences of the info log line `Frame meets the threshold requirements.` while skipping frame export (`-f`).
+- Functional assertions only: positive sample `sample_yes.mp4` must produce >0 detections; negative sample `sample_no.mp4` must produce 0 detections. CI parses detections by counting the info log line `Frame meets the threshold requirements.` while skipping frame export (`-f`).
