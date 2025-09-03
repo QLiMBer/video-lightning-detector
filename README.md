@@ -200,6 +200,12 @@ go test -coverprofile coverage.out ./...
 go tool cover -html coverage.out
 ```
 
+## Contributing & Workflow
+- Branches: `main` (protected, releasable) and `next` (integration). Use `feature/<scope>` branches and open PRs to the appropriate target.
+- CI: GitHub Actions runs format/vet/build/test. Docs‑only changes skip heavy steps to keep CI fast.
+- PRs: small, squash‑merged, with at least one review. See docs/HIGH-ROI-GITHUB-WORKFLOW.md for full details and tips.
+- Roadmap: see docs/ROADMAP.md for upcoming improvements (functional tests, bench, releases).
+
 The detection takes ages to complete? Running the detector with frame scaling to improve performance.
 ```sh
 video-lightning-detector -i ~/path/to/video.mp4 -o ~/output/directory/ -a -s 0.1
