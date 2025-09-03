@@ -115,7 +115,7 @@ Typical jobs (Linux runner):
 - Lint/Format: fail on unformatted code (`go fmt -l .` should output nothing). Optionally add `go vet ./...`.
 - Build: `go build ./...` ensures all packages compile. Use module cache.
 - Test: `go test -race -coverprofile coverage.out ./...` then `go tool cover -html=coverage.out` as an artifact.
-- ffmpeg: install with `sudo apt-get update && sudo apt-get install -y ffmpeg` on Ubuntu runners.
+- ffmpeg: use a prebuilt setup action for speed (e.g., `FedericoCarboni/setup-ffmpeg@v3` with `ffmpeg-version: latest`).
 
 Example GitHub Actions skeleton (matches our `.github/workflows/ci.yml` job `build-test`):
 ```
@@ -131,7 +131,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with: { go-version: '1.22.x', cache: true }
-      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - uses: FedericoCarboni/setup-ffmpeg@v3
+        with: { ffmpeg-version: latest }
       - name: Format check
         run: |
           df=$(go fmt ./...); if [ -n "$df" ]; then echo "$df" && exit 1; fi
