@@ -59,7 +59,7 @@ jobs:
         if: steps.changes.outputs.code == 'true' || steps.changes.outputs.samples == 'true' || steps.changes.outputs.workflows == 'true'
         uses: FedericoCarboni/setup-ffmpeg@v3
         with:
-          version: latest
+          ffmpeg-version: '6.0'
 
       - name: Format check
         if: steps.changes.outputs.code == 'true' || steps.changes.outputs.samples == 'true' || steps.changes.outputs.workflows == 'true'
