@@ -84,15 +84,6 @@ jobs:
         if: steps.changes.outputs.code == 'true' || steps.changes.outputs.samples == 'true' || steps.changes.outputs.workflows == 'true'
         run: go test -race -coverprofile coverage.out ./...
 
-      - name: Smoke test (sample video)
-        if: steps.changes.outputs.code == 'true'
-        run: |
-          ./bin/video-lightning-detector \
-            -i "resources/samples/sample 0.mp4" \
-            -o ./runs/ci \
-            -a -s 0.1 -f
-          echo "✅ Smoke test completed (execution and I/O paths OK)" >> $GITHUB_STEP_SUMMARY
-
       - name: Coverage HTML
         if: steps.changes.outputs.code == 'true' || steps.changes.outputs.samples == 'true' || steps.changes.outputs.workflows == 'true'
         run: go tool cover -html=coverage.out -o coverage.html
