@@ -110,3 +110,38 @@ jobs:
           fi
           ./bin/video-lightning-detector -i "$SAMPLE" -o ./runs/ci -a -s 0.1 -f
           echo "✅ Smoke test completed (execution and I/O paths OK) using: $SAMPLE" >> $GITHUB_STEP_SUMMARY
+
+      - name: Functional assertions (positive and negative)
+        if: steps.changes.outputs.code == 'true' || steps.changes.outputs.samples == 'true' || steps.changes.outputs.workflows == 'true'
+        run: |
+          set -euo pipefail
+
+          POSITIVE="resources/samples/sample_yes.mp4"
+          NEGATIVE="resources/samples/sample_no.mp4"
+
+          if [ ! -f "$POSITIVE" ] || [ ! -f "$NEGATIVE" ]; then
+            echo "Skipping functional assertions (samples missing)." | tee -a $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
+          # Positive: expect >0 detections
+          ./bin/video-lightning-detector -i "$POSITIVE" -o ./runs/ci-positive -a -s 0.1 -f | tee positive.log
+          POS_COUNT=$(grep -c 'Frame meets the threshold requirements\.' positive.log || true)
+          if [ -z "${POS_COUNT:-}" ] || [ "$POS_COUNT" -le 0 ]; then
+            echo "Expected >0 detections on positive sample; got ${POS_COUNT:-unset}" | tee -a $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+          # Negative: expect 0 detections
+          ./bin/video-lightning-detector -i "$NEGATIVE" -o ./runs/ci-negative -a -s 0.1 -f | tee negative.log
+          NEG_COUNT=$(grep -c 'Frame meets the threshold requirements\.' negative.log || true)
+          if [ -z "${NEG_COUNT:-}" ]; then
+            echo "Could not parse detection count on negative sample" | tee -a $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          if [ "$NEG_COUNT" -ne 0 ]; then
+            echo "Expected 0 detections on negative sample; got $NEG_COUNT" | tee -a $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+          echo "✅ Functional assertions passed: positive=$POS_COUNT negative=$NEG_COUNT" >> $GITHUB_STEP_SUMMARY
