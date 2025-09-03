@@ -25,3 +25,7 @@ for f in *.mp4; do ffmpeg -i "$f" -c copy -an "noaudio_$f"; done
 
 ## Guidelines
 - Keep files reasonably small to avoid bloating the repo; consider short clips or downscaled resolution.
+
+## CI Usage
+- The CI smoke test currently runs the detector against `sample 0.mp4` with flags `-a -s 0.1 -f` to verify runtime and I/O paths.
+- A future negative sample (no lightning) will be added to support functional assertions in CI.
