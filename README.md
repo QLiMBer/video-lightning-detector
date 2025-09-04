@@ -82,15 +82,15 @@ go build -v -o bin/video-lightning-detector .
 ```sh
 # Auto-thresholds, with frame downscaling for speed
 ./bin/video-lightning-detector \
-  -i path/to/video.mp4 \
-  -o ./runs/my-video \
+  -i resources/samples/sample_yes.mp4 \
+  -o ./runs/sample-yes \
   -a -s 0.4
 
 # Optional: denoise to reduce false positives
-# ./bin/video-lightning-detector -i path/to/video.mp4 -o ./runs/my-video -a -n
+# ./bin/video-lightning-detector -i resources/samples/sample_yes.mp4 -o ./runs/sample-yes -a -n
 
 # Optional: export CSV/JSON stats and an HTML chart
-# ./bin/video-lightning-detector -i path/to/video.mp4 -o ./runs/my-video -a -e -j -r
+# ./bin/video-lightning-detector -i resources/samples/sample_yes.mp4 -o ./runs/sample-yes -a -e -j -r
 ```
 
 Notes:
@@ -106,7 +106,7 @@ which go && which ffmpeg && which ffprobe  # quick sanity check
 
 # 2) Run the detector (binary already built in ./bin/)
 ./bin/video-lightning-detector \
-  -i path/to/video.mp4 \
+  -i resources/samples/sample_yes.mp4 \
   -o ./runs/session-001 \
   -a -s 0.4 [-n] [-e -j -r] [-v]
 
@@ -115,9 +115,12 @@ go build -v -o bin/video-lightning-detector .
 ```
 Quick test using bundled samples:
 ```sh
-# Paths with spaces need quoting
+# Positive short sample (>0 detections expected)
+./bin/video-lightning-detector -i resources/samples/sample_yes.mp4 -o ./runs/sample-yes -a -s 0.4
+# Negative short sample (0 detections expected)
+./bin/video-lightning-detector -i resources/samples/sample_no.mp4 -o ./runs/sample-no -a -s 0.4
+# Longer sample for deeper analysis (path has spaces)
 ./bin/video-lightning-detector -i "resources/samples/sample 1.mp4" -o ./runs/sample-1 -a -s 0.4
-./bin/video-lightning-detector -i "resources/samples/sample 2.mp4" -o ./runs/sample-2 -a -s 0.4
 ```
 Outputs (inside your `-o` directory):
 - Exported frames: `frame-<n>.png`.
@@ -132,7 +135,7 @@ Tips:
 All available flags/commands:
 ```sh
 Usage:
-  video-ligtning-detector [flags]
+video-ligtning-detector [flags]
 
 Flags:
   -a, --auto-thresholds                               Automatically select thresholds for all parameters based on calculated frame values. Values that are explicitly provided will not be overwritten.
@@ -155,7 +158,7 @@ Flags:
 # Example workflow
 Running the detector with default values and auto-threshold calculation. The most automated apporach.
 ```sh
-video-lightning-detector -i ~/path/to/video.mp4 -o ~/output/directory/ -a
+video-lightning-detector -i resources/samples/sample_yes.mp4 -o ./runs/example -a
 ```
 
 ## Development Pipeline
@@ -178,13 +181,13 @@ go mod tidy
 go build -v -o bin/video-lightning-detector .
 
 # 5) Run a test scenario
-./bin/video-lightning-detector -i path/to/video.mp4 -o ./runs/dev -a -s 0.4
+./bin/video-lightning-detector -i resources/samples/sample_yes.mp4 -o ./runs/dev -a -s 0.4
 ```
 
 Profiling and coverage (optional):
 ```sh
 # Bench with CPU/MEM profiles (benchmark reads args from VLD_CLI_ARGS)
-export VLD_CLI_ARGS='-i path/to/video.mp4 -o ./runs/bench -a -s 0.4'
+export VLD_CLI_ARGS='-i resources/samples/sample_yes.mp4 -o ./runs/bench -a -s 0.4'
 go test -v -run ^$ -bench . -cpuprofile cpu.prof -memprofile mem.prof
 
 # Inspect profiles
@@ -208,32 +211,32 @@ go tool cover -html coverage.out
 
 The detection takes ages to complete? Running the detector with frame scaling to improve performance.
 ```sh
-video-lightning-detector -i ~/path/to/video.mp4 -o ~/output/directory/ -a -s 0.1
+video-lightning-detector -i resources/samples/sample_yes.mp4 -o ./runs/example -a -s 0.1
 ```
 
 The recording noise or movement on the video is causing false positives? Lets additionaly apply noise reduction.
 ```sh
-video-lightning-detector -i ~/path/to/video.mp4 -o ~/output/directory/ -a -n
+video-lightning-detector -i resources/samples/sample_yes.mp4 -o ./runs/example -a -n
 ```
 
 Running the detector without exporting the frames but with CSV and JSON report export.
 ```sh
-video-lightning-detector -i ~/path/to/video.mp4 -o ~/output/directory/ -a -f -e -j
+video-lightning-detector -i resources/samples/sample_yes.mp4 -o ./runs/example -a -f -e -j
 ```
 
 Running the detector with explicit threshold values.
 ```sh
-video-lightning-detector -i ~/path/to/video.mp4 -o ~/output/directory/ -t 0.002 -c 0.052 -b 0.035
+video-lightning-detector -i resources/samples/sample_yes.mp4 -o ./runs/example -t 0.002 -c 0.052 -b 0.035
 ```
 
 Running the detector with auto-threshold but explicit forced brightness threshold.
 ```sh
-video-lightning-detector -i ~/path/to/video.mp4 -o ~/output/directory/ -a -b 0.035
+video-lightning-detector -i resources/samples/sample_yes.mp4 -o ./runs/example -a -b 0.035
 ```
 
 Running the detector with custom moving mean resolution.
 ```sh
-video-lightning-detector -i ~/path/to/video.mp4 -o ~/output/directory/ -a -m 60
+video-lightning-detector -i resources/samples/sample_yes.mp4 -o ./runs/example -a -m 60
 ```
 
 # Example results
