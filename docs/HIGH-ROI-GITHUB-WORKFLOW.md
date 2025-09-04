@@ -78,6 +78,19 @@ Notes for Rulesets UI (gotchas):
 - Syncing `main` and `next`: if protections block updates, temporarily remove `next` from the ruleset (or delete and recreate it) to align branches, then re‑enable protections.
 - Forks view: when opening PRs, ensure the base repository is your fork (not the upstream) before selecting base branch.
 
+### Troubleshooting: Branch Appears Out of Sync
+If `next` (or any branch) looks perpetually stale or missing locally even after fetch/prune, the remote fetch refspec may be restricted to a single branch.
+
+- Symptom: `git fetch --all --prune` does not update remote tracking for `origin/next`; `git branch -r` does not list it, but GitHub shows it exists and is aligned.
+- Diagnose: check the refspec.
+  - `git config --get-all remote.origin.fetch`
+  - Problematic output: `+refs/heads/main:refs/remotes/origin/main` only.
+- Fix: restore the default “fetch all branches” refspec and prune.
+  - `git config --unset-all remote.origin.fetch`
+  - `git config --add remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*'`
+  - `git fetch --all --prune`
+- Prevent: avoid narrowing `remote.origin.fetch` unless intentionally creating a single-branch clone.
+
 ### Draft PRs and Checklists
 Open PRs as Draft to signal “work in progress” and avoid premature reviews. Convert to “Ready for review” when the checklist below is satisfied.
 
