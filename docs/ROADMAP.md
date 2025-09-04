@@ -5,6 +5,7 @@ Purpose: track near-term improvements and future ideas. Keep items small and act
 ## Near-Term
 - Add a lightweight bench workflow (manual trigger) using `VLD_CLI_ARGS` to profile CPU/MEM and upload artifacts.
 - Consider enabling `golangci-lint` with a fast preset to complement `go vet`.
+ - See Performance & Measurement guide: docs/PERFORMANCE.md
 
 ## Later
 - Release automation: tag-driven releases with changelog (Release Please) and/or multi-OS binaries (GoReleaser).
