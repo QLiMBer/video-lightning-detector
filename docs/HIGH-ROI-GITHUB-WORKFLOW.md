@@ -32,9 +32,8 @@ Purpose: keep `main` always releasable, iterate fast on branches, and make chang
 - CODEOWNERS, PR template with checklist, Dependabot (Go modules, Actions), branch protection rules.
 
 ## Samples & Tests
-- Keep samples small under `resources/samples/`. Consider a CI smoke test against a tiny clip.
-  - CI smoke test uses `resources/samples/sample 0.mp4` with `-a -s 0.1 -f` to keep runtime low. Purpose: environment/runtime check.
-  - Functional detection assertions: run detector on `resources/samples/sample_yes.mp4` (expects >0 detections) and `resources/samples/sample_no.mp4` (expects 0). Assertions parse the count by matching the per-detection info log line `Frame meets the threshold requirements.`; frame export is skipped with `-f` for speed.
+- Keep samples small under `resources/samples/`.
+- CI functional assertions only: run detector on `resources/samples/sample_yes.mp4` (expects >0) and `resources/samples/sample_no.mp4` (expects 0). Assertions parse the info log line `Frame meets the threshold requirements.`; frame export is skipped with `-f` for speed. No separate smoke step.
 
 ## Roadmap & Progress (update as we go)
 - [x] Document workflow in repo
@@ -78,6 +77,19 @@ Notes for Rulesets UI (gotchas):
 - Status checks search: the required checks list appears only after you start typing; type "build-test" to select the CI job from `.github/workflows/ci.yml`.
 - Syncing `main` and `next`: if protections block updates, temporarily remove `next` from the ruleset (or delete and recreate it) to align branches, then re‑enable protections.
 - Forks view: when opening PRs, ensure the base repository is your fork (not the upstream) before selecting base branch.
+
+### Troubleshooting: Branch Appears Out of Sync
+If `next` (or any branch) looks perpetually stale or missing locally even after fetch/prune, the remote fetch refspec may be restricted to a single branch.
+
+- Symptom: `git fetch --all --prune` does not update remote tracking for `origin/next`; `git branch -r` does not list it, but GitHub shows it exists and is aligned.
+- Diagnose: check the refspec.
+  - `git config --get-all remote.origin.fetch`
+  - Problematic output: `+refs/heads/main:refs/remotes/origin/main` only.
+- Fix: restore the default “fetch all branches” refspec and prune.
+  - `git config --unset-all remote.origin.fetch`
+  - `git config --add remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*'`
+  - `git fetch --all --prune`
+- Prevent: avoid narrowing `remote.origin.fetch` unless intentionally creating a single-branch clone.
 
 ### Draft PRs and Checklists
 Open PRs as Draft to signal “work in progress” and avoid premature reviews. Convert to “Ready for review” when the checklist below is satisfied.
@@ -177,9 +189,8 @@ Checklist
 ```
 - Dependabot (`.github/dependabot.yml`): weekly updates for `gomod` and `github-actions`.
 
-### Samples & CI Smoke Test
-- Keep bundled samples small. For CI, run the detector on a very short clip with `-s 0.1` and skip exporting frames (`-f`) to save time.
-- Example smoke step: `./bin/video-lightning-detector -i "resources/samples/sample 3.mp4" -o ./runs/ci -a -s 0.1 -f`
+### Samples & Functional Assertions
+- CI uses tiny bundled samples. Assertions run on `sample_yes.mp4` and `sample_no.mp4` with `-s 0.1 -f` for speed.
 
 ### Codex Branches Policy
 - Create as `codex/<topic>` and target `next` for large changes.

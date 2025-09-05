@@ -10,7 +10,7 @@
 ## Daily Use
 When opening a new terminal after a restart:
 - Activate local tools: `source ./env.sh` (adds `.tooling/go/bin` and `.tooling/ffmpeg` to `PATH`). Verify with `which go && which ffmpeg`.
-- If the binary already exists: `./bin/video-lightning-detector -i <video.mp4> -o <out-dir> -a -s 0.4 [-n]`.
+- If the binary already exists: `./bin/video-lightning-detector -i resources/samples/sample_yes.mp4 -o runs/sample-yes -a -s 0.4 [-n]`.
 - If not built yet (or after code changes), build first: `go build -v -o bin/video-lightning-detector .` then run as above.
 
 ## Dev Pipeline (manual)
@@ -18,7 +18,7 @@ When opening a new terminal after a restart:
 - Format and test: `go fmt ./... && go test ./...`.
 - If you add imports or upgrade deps: `go mod tidy`.
 - Build: `go build -v -o bin/video-lightning-detector .`.
-- Run your scenario, e.g.: `./bin/video-lightning-detector -i samples/video.mp4 -o runs/test -a -s 0.4`.
+- Run your scenario, e.g.: `./bin/video-lightning-detector -i resources/samples/sample_yes.mp4 -o runs/test -a -s 0.4`.
 
 ## Coding Style & Naming Conventions
 - Go 1.20+; format with `go fmt ./...`. Keep imports tidy.
@@ -28,7 +28,7 @@ When opening a new terminal after a restart:
 ## Testing Guidelines
 - Unit tests: `go test ./...`.
 - Coverage: `go test -coverprofile coverage.out ./... && go tool cover -html coverage.out`.
-- Benchmarks: `export VLD_CLI_ARGS='-i input.mp4 -o out -a' && go test -bench .` (uses `BenchmarkVideoLightningDetectorFromEnvArgs`).
+- Benchmarks: `export VLD_CLI_ARGS='-i resources/samples/sample_yes.mp4 -o runs/bench -a' && go test -bench .` (uses `BenchmarkVideoLightningDetectorFromEnvArgs`).
 
 ## Commit & Pull Request Guidelines
 - Commits: imperative mood; consider `feat:`, `fix:`, `refactor:`, `docs:` when helpful.
@@ -43,3 +43,6 @@ When opening a new terminal after a restart:
 - PRs: small, squash merge, title uses Conventional Commits (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`). Target `next` for large refactors; `main` for safe fixes.
 - CI (expected): `go fmt -l` clean, `go vet`, build, `go test -race -coverprofile`. ffmpeg must be available.
 - Samples: prefer `resources/samples/`; keep files small. For quick checks, see README “Daily Use → Quick test using bundled samples”.
+
+## Git Mentoring Convention
+- Do not use ellipses in commands or explanations. Always write complete names and paths.
