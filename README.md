@@ -22,6 +22,7 @@ We can enter the appropriate threshold values for the above parameters to fine-t
 ## Performance & Measurement
 - For benchmarks, profiling, and timing guidance, see [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
 - Perf results system (runs + compare): see [docs/PERFORMANCE.md#perf-results-system-runs--compare](docs/PERFORMANCE.md#perf-results-system-runs--compare).
+ - Quieter runs: add `--quiet-detections` for concise output plus a final `Detections: N` summary.
 
 # Requirements and installation
 Required software for the manual, self‑contained workflow:

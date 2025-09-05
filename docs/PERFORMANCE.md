@@ -1,7 +1,5 @@
 # Performance & Measurement
 
-> Note: The code is being aligned with this document; some features (quiet detections, single-line "Detections: N", vld-perf parsing/streaming) may still be rolling out on the `next` branch.
-
 Purpose: clear guidance to measure performance, compare changes, and identify bottlenecks quickly.
 
 ## What To Measure
@@ -17,6 +15,7 @@ Purpose: clear guidance to measure performance, compare changes, and identify bo
   - Flag: `--export-timings` writes `timings.json` with per‑stage and total durations (ms) in the output directory.
   - The detector prints a single-line summary `Detections: <N>` at the end of detection for concise counting.
   - Use for automated comparisons and artifact tracking.
+  - Quiet detections: `--quiet-detections` hides per-frame positive lines ("Frame meets the threshold requirements.") and the low-value debug line ("Checking frame thresholds."), while keeping failure reasons available under `-v/--verbose`.
 - End‑to‑end benchmark (Go test)
   - `main_test.go` reads `VLD_CLI_ARGS` and runs the CLI repeatedly; supports quoted paths.
   - Use `-benchmem` and `-count` for stable numbers and allocation stats.

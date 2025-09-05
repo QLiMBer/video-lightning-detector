@@ -254,7 +254,10 @@ func (detector *detector) performVideoDetection(framesCollection *frame.FramesCo
 
 	for frameIndex, frame := range frames {
 		logPrefix := fmt.Sprintf("Frame: [%d/%d].", frameIndex+1, len(frames))
-		detector.renderer.LogDebug("%s Checking frame thresholds.", logPrefix)
+		// In quiet-detections mode, suppress the low-value per-frame "Checking" debug line
+		if !detector.options.QuietDetections {
+			detector.renderer.LogDebug("%s Checking frame thresholds.", logPrefix)
+		}
 
 		if frame.Brightness < detector.options.BrightnessDetectionThreshold+statistics.BrightnessMovingMean[frameIndex] {
 			detector.renderer.LogDebug("%s Frame brightenss requirements not met. (%f < %f + %f)",
@@ -292,7 +295,10 @@ func (detector *detector) performVideoDetection(framesCollection *frame.FramesCo
 			continue
 		}
 
-		detector.renderer.LogInfo("%s Frame meets the threshold requirements.", logPrefix)
+		// Gate per-frame positive logs behind quiet option to reduce verbosity
+		if !detector.options.QuietDetections {
+			detector.renderer.LogInfo("%s Frame meets the threshold requirements.", logPrefix)
+		}
 		detections.Append(frameIndex, true)
 
 		progressBarStep()
@@ -300,7 +306,11 @@ func (detector *detector) performVideoDetection(framesCollection *frame.FramesCo
 
 	progressBarClose()
 	detector.renderer.LogDebug("Video detection stage finished. Stage took: %s", time.Since(videoDetectionTime))
-	return detections.Resolve()
+
+	resolved := detections.Resolve()
+	// Always emit a single-line machine-readable summary for total detections
+	detector.renderer.LogInfo("Detections: %d", len(resolved))
+	return resolved
 }
 
 // Helper function used to export frames which meet the requirement thresholds to png files.

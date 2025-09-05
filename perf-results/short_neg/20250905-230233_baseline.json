@@ -1,0 +1,29 @@
+{
+    "metadata": {
+        "run_id": "20250905-230233_baseline",
+        "suite": "short_neg",
+        "label": "baseline",
+        "commit_sha": "4adac24",
+        "branch": "feature/detector-quiet-and-vld-perf",
+        "go_version": "go version go1.22.5 linux/amd64",
+        "ffmpeg_version": "ffmpeg version 7.0.2-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2000-2024 the FFmpeg developers",
+        "os": "linux",
+        "arch": "amd64",
+        "cli_args": "-i resources/samples/sample_no.mp4 -o runs/perf -a -s 0.4 -f",
+        "timestamp_iso": "2025-09-05T23:02:33+02:00"
+    },
+    "timings_ms": {
+        "total_ms": 2385.19,
+        "stages_ms": {
+            "auto_thresholds": 0.023,
+            "video_analysis": 2382.612,
+            "video_detection": 0.886
+        }
+    },
+    "bench": {
+        "ns_per_op": 2436056230,
+        "bytes_per_op": 15240,
+        "allocs_per_op": 48
+    },
+    "detections": 0
+}

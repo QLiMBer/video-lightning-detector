@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -309,9 +308,36 @@ func runBench(cliArgs string, opts runOpts) benchStats {
 	args := []string{"test", "-v", "-run", "^$", "-bench", "BenchmarkVideoLightningDetectorFromEnvArgs", "-benchmem", "-count", "1"}
 	cmd := exec.Command("go", args...)
 	cmd.Env = env
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		fatalf("go test bench failed: %v\n%s", err, out)
+
+	// Run with a heartbeat to show liveness during long compile/run phases.
+	done := make(chan struct{})
+	var out []byte
+	var runErr error
+	go func() {
+		out, runErr = cmd.CombinedOutput()
+		close(done)
+	}()
+
+	if opts.echo {
+		fmt.Fprintln(os.Stderr, "bench: compiling and running (first run may be slow)...")
+	}
+	start := time.Now()
+	ticker := time.NewTicker(12 * time.Second)
+	defer ticker.Stop()
+loop:
+	for {
+		select {
+		case <-done:
+			break loop
+		case <-ticker.C:
+			if opts.echo {
+				fmt.Fprintf(os.Stderr, "bench: still running (%ds)\n", int(time.Since(start).Seconds()))
+			}
+		}
+	}
+
+	if runErr != nil {
+		fatalf("go test bench failed: %v\n%s", runErr, out)
 	}
 	s := string(out)
 	if opts.echo {
@@ -341,16 +367,16 @@ func parseBench(output string) benchStats {
 }
 
 func runOnceForTimingsAndDetections(cliArgs string, opts runOpts) (timingsReport, int) {
-	// Ensure export-timings and verbose for counting detections; ensure -f to skip exports.
+	// Ensure export-timings; ensure -f to skip frame exports; prefer quiet detections for concise output.
 	args := parseArgs(cliArgs)
 	if !hasArg(args, "--export-timings") {
 		args = append(args, "--export-timings")
 	}
-	if !hasArg(args, "-v") && !hasArg(args, "--verbose") {
-		args = append(args, "-v")
-	}
 	if !hasArg(args, "-f") && !hasArg(args, "--skip-frames-export") {
 		args = append(args, "-f")
+	}
+	if !hasArg(args, "--quiet-detections") {
+		args = append(args, "--quiet-detections")
 	}
 
 	bin := filepath.Join(".", "bin", "video-lightning-detector")
@@ -366,14 +392,27 @@ func runOnceForTimingsAndDetections(cliArgs string, opts runOpts) (timingsReport
 	if err := cmd.Start(); err != nil {
 		fatalf("failed to start detector: %v", err)
 	}
-	var reader io.Reader = stdout
+
+	// Stream output robustly while capturing for parsing
+	var buf strings.Builder
+	var dst io.Writer = &buf
 	if opts.stream {
-		reader = io.TeeReader(stdout, os.Stdout)
+		dst = io.MultiWriter(os.Stdout, &buf)
 	}
-	detections := countDetections(reader)
+	done := make(chan struct{})
+	go func() {
+		// Copy until EOF; tolerate long progress lines without newline
+		_, _ = io.Copy(dst, stdout)
+		close(done)
+	}()
+
 	if err := cmd.Wait(); err != nil {
 		fatalf("detector failed: %v", err)
 	}
+	<-done
+
+	outStr := buf.String()
+	detections := parseDetections(outStr)
 
 	// Find output directory to read timings.json
 	outDir := findOutputDir(args)
@@ -393,16 +432,16 @@ func runOnceForTimingsAndDetections(cliArgs string, opts runOpts) (timingsReport
 	return tr, detections
 }
 
-func countDetections(r io.Reader) int {
-	s := bufio.NewScanner(r)
-	count := 0
-	for s.Scan() {
-		line := s.Text()
-		if strings.Contains(line, "Frame meets the threshold requirements.") {
-			count++
-		}
+var summaryRe = regexp.MustCompile(`(?m)^Detections:\s+(\d+)\s*$`)
+
+func parseDetections(output string) int {
+	if m := summaryRe.FindStringSubmatch(output); len(m) == 2 {
+		var n int
+		fmt.Sscanf(m[1], "%d", &n)
+		return n
 	}
-	return count
+	// Fallback: count per-frame positive occurrences in the stream
+	return strings.Count(output, "Frame meets the threshold requirements.")
 }
 
 func findOutputDir(args []string) string {
