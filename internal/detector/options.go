@@ -2,18 +2,18 @@ package detector
 
 // Structure representing the options for the detector.
 type DetectorOptions struct {
-    AutoThresholds                              bool
-    BrightnessDetectionThreshold                float64
-    ColorDifferenceDetectionThreshold           float64
-    BinaryThresholdDifferenceDetectionThreshold float64
-    MovingMeanResolution                        int32
-    ExportCsvReport                             bool
-    ExportJsonReport                            bool
-    ExportChartReport                           bool
-    ExportTimingsReport                         bool
-    SkipFramesExport                            bool
-    Denoise                                     bool
-    FrameScalingFactor                          float64
+	AutoThresholds                              bool
+	BrightnessDetectionThreshold                float64
+	ColorDifferenceDetectionThreshold           float64
+	BinaryThresholdDifferenceDetectionThreshold float64
+	MovingMeanResolution                        int32
+	ExportCsvReport                             bool
+	ExportJsonReport                            bool
+	ExportChartReport                           bool
+	ExportTimingsReport                         bool
+	SkipFramesExport                            bool
+	Denoise                                     bool
+	FrameScalingFactor                          float64
 }
 
 // Return a boolean value representing if the detector options are valid. If any validation errors occured
@@ -41,18 +41,18 @@ func (options *DetectorOptions) AreValid() (bool, string) {
 
 // Return the default detector options.
 func GetDefaultDetectorOptions() DetectorOptions {
-    return DetectorOptions{
-        AutoThresholds:                              false,
-        BrightnessDetectionThreshold:                0.0,
-        ColorDifferenceDetectionThreshold:           0.0,
-        BinaryThresholdDifferenceDetectionThreshold: 0.0,
-        MovingMeanResolution:                        50,
-        ExportCsvReport:                             false,
-        ExportJsonReport:                            false,
-        ExportChartReport:                           false,
-        ExportTimingsReport:                         false,
-        SkipFramesExport:                            false,
-        Denoise:                                     false,
-        FrameScalingFactor:                          0.5,
-    }
+	return DetectorOptions{
+		AutoThresholds:                              false,
+		BrightnessDetectionThreshold:                0.0,
+		ColorDifferenceDetectionThreshold:           0.0,
+		BinaryThresholdDifferenceDetectionThreshold: 0.0,
+		MovingMeanResolution:                        50,
+		ExportCsvReport:                             false,
+		ExportJsonReport:                            false,
+		ExportChartReport:                           false,
+		ExportTimingsReport:                         false,
+		SkipFramesExport:                            false,
+		Denoise:                                     false,
+		FrameScalingFactor:                          0.5,
+	}
 }
