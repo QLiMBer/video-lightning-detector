@@ -66,6 +66,56 @@ Use `scripts/bench.sh` as a wrapper for repeatable local runs.
 - Customize: `COUNT=7`, `PROFILE=1`, or change `VLD_CLI_ARGS`.
 - Example: `COUNT=5 PROFILE=1 ./scripts/bench.sh`
 
+## Perf Results System (runs + compare)
+A lightweight file-based system to run suites, store results, and compare against a baseline.
+
+- Setup
+```
+# Build detector and perf CLI
+source ./env.sh
+go build -v -o bin/video-lightning-detector .
+go build -v -o bin/vld-perf ./cmd/vld-perf
+
+# Configure suites (edit as needed)
+cat perf-results/suites.json
+```
+
+- Create baseline (per suite)
+```
+bin/vld-perf run short_pos --label baseline --as-baseline
+bin/vld-perf run short_neg --label baseline --as-baseline
+# optional long clip
+bin/vld-perf run long_pos  --label baseline --as-baseline
+```
+
+- Iterate and auto‑compare to baseline
+```
+bin/vld-perf run short_pos --label opt1
+```
+Shows deltas for: total_ms, analysis_ms, detection_ms, ns/op, B/op, allocs/op.
+
+- Compare historic runs
+```
+bin/vld-perf compare short_pos baseline 20250905-153012_opt1
+```
+
+- List and manage runs
+```
+# List runs for a suite (baseline marked)
+bin/vld-perf list short_pos
+
+# Set a different baseline
+bin/vld-perf set-baseline short_pos <run-id>
+
+# Delete a run (file removal)
+bin/vld-perf rm short_pos <run-id>
+```
+
+- Run IDs and data captured
+  - Run ID: `YYYYMMDD-HHMMSS_<label>` (choose a meaningful `--label`).
+  - Stored at: `perf-results/<suite>/<run-id>.json` with metadata (commit, branch, go/ffmpeg, OS/arch, suite name, exact CLI args), timings (total + stages), Go bench stats (ns/op, B/op, allocs/op), and detection count (from Info logs).
+  - Baseline pointer: `perf-results/<suite>/baseline.json`.
+
 ## Guardrails for Quality
 - Quick: count Info logs `Frame meets the threshold requirements.` to catch obvious regressions.
 - Deeper: use `-e -j -r` to export CSV/JSON/HTML and compare statistics when needed.

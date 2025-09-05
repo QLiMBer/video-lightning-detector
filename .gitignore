@@ -39,10 +39,12 @@ coverage.out
 cpu-profile.svg
 mem-profile.svg
 
+# Local tooling (self-contained workflow)
+.tooling/
+env.sh
+
 # Go build and module caches (local)
 .gocache/
 .gomodcache/
 
-# Local tooling (self-contained workflow)
-.tooling/
-env.sh
+# Perf results: tracked in repo (keep JSONs under perf-results/)
