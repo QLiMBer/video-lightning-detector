@@ -14,6 +14,8 @@ type DetectorOptions struct {
 	SkipFramesExport                            bool
 	Denoise                                     bool
 	FrameScalingFactor                          float64
+	// When true, suppress per-frame positive detection Info logs while keeping progress bars and summaries.
+	QuietDetections bool
 }
 
 // Return a boolean value representing if the detector options are valid. If any validation errors occured
@@ -54,5 +56,6 @@ func GetDefaultDetectorOptions() DetectorOptions {
 		SkipFramesExport:                            false,
 		Denoise:                                     false,
 		FrameScalingFactor:                          0.5,
+		QuietDetections:                             false,
 	}
 }

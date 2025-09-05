@@ -71,6 +71,13 @@ func init() {
 		DetectorOptions.SkipFramesExport,
 		"Value indicating if the detected frames should not be exported.")
 
+	// Extra quiet mode for detections: suppress per-frame positive Info logs to keep output concise.
+	rootCmd.PersistentFlags().BoolVar(
+		&DetectorOptions.QuietDetections,
+		"quiet-detections",
+		DetectorOptions.QuietDetections,
+		"Suppress per-frame detection Info logs; keep progress bars and final summary.")
+
 	rootCmd.PersistentFlags().BoolVarP(
 		&DetectorOptions.ExportCsvReport,
 		"export-csv-report", "e",
