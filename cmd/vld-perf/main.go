@@ -51,7 +51,7 @@ type runResult struct {
 
 func usage() {
     fmt.Println("Usage:")
-    fmt.Println("  vld-perf run <suite> [--label <label>] [--as-baseline] [--threshold <pct>]")
+    fmt.Println("  vld-perf run <suite> [--label <label>] [--as-baseline] [--threshold <pct>] [--verbose] [--quiet] [--no-stream]")
     fmt.Println("  vld-perf compare <suite> <lhs-run-id|baseline> <rhs-run-id>")
     fmt.Println("  vld-perf list [<suite>]")
     fmt.Println("  vld-perf set-baseline <suite> <run-id>")
@@ -84,6 +84,13 @@ func main() {
     }
 }
 
+type runOpts struct {
+    echo     bool
+    verbose  bool
+    stream   bool
+    threshold float64
+}
+
 func runCmd(args []string) {
     if len(args) < 1 {
         fmt.Fprintln(os.Stderr, "run requires <suite>")
@@ -93,6 +100,9 @@ func runCmd(args []string) {
     label := "run"
     asBaseline := false
     threshold := 5.0
+    quiet := false
+    verbose := false
+    noStream := false
     for i := 1; i < len(args); i++ {
         switch args[i] {
         case "--label":
@@ -109,6 +119,12 @@ func runCmd(args []string) {
             }
             fmt.Sscanf(args[i+1], "%f", &threshold)
             i++
+        case "--quiet":
+            quiet = true
+        case "--verbose":
+            verbose = true
+        case "--no-stream":
+            noStream = true
         default:
             fatalf("unknown flag: %s", args[i])
         }
@@ -121,22 +137,36 @@ func runCmd(args []string) {
     }
 
     runID := time.Now().Format("20060102-150405") + "_" + sanitize(label)
-    res := mustExecuteSuite(suite, runID, label, cli)
+    opts := runOpts{echo: !quiet, verbose: verbose, stream: !noStream, threshold: threshold}
+
+    // Echo planned commands
+    if opts.echo {
+        fmt.Printf("bench> go test -v -run ^$ -bench BenchmarkVideoLightningDetectorFromEnvArgs -benchmem -count 1\n")
+        if opts.verbose {
+            fmt.Printf("env> VLD_CLI_ARGS=%s\n", cli)
+        }
+    }
+
+    res := mustExecuteSuite(suite, runID, label, cli, opts)
     mustWriteRun(suite, runID, res)
     fmt.Printf("Saved: perf-results/%s/%s.json\n", suite, runID)
 
     // Compare to baseline if exists
-    baseID, ok := loadBaselineID(suite)
-    if ok {
+    baseID, hadBaseline := loadBaselineID(suite)
+    if hadBaseline {
         lhs := mustReadRun(suite, baseID)
         printComparison("baseline", lhs, runID, res, threshold)
-    } else {
-        fmt.Println("No baseline set; use set-baseline or --as-baseline to define one.")
     }
 
     if asBaseline {
         mustWriteBaselineID(suite, runID)
-        fmt.Printf("Baseline set to %s\n", runID)
+        if hadBaseline {
+            fmt.Printf("Baseline set to %s\n", runID)
+        } else {
+            fmt.Printf("Baseline initialized: %s\n", runID)
+        }
+    } else if !hadBaseline {
+        fmt.Println("No baseline set; use set-baseline or --as-baseline to define one.")
     }
 }
 
@@ -238,7 +268,7 @@ func mustLoadSuites() suitesConfig {
     return s
 }
 
-func mustExecuteSuite(suite, runID, label, cliArgs string) runResult {
+func mustExecuteSuite(suite, runID, label, cliArgs string, opts runOpts) runResult {
     // Prepare metadata
     sha := runCmdOutSilent("git", "rev-parse", "--short", "HEAD")
     branch := runCmdOutSilent("git", "rev-parse", "--abbrev-ref", "HEAD")
@@ -260,10 +290,10 @@ func mustExecuteSuite(suite, runID, label, cliArgs string) runResult {
     }
 
     // End-to-end bench (count=1), collect ns/op etc.
-    bench := runBench(cliArgs)
+    bench := runBench(cliArgs, opts)
 
     // Run CLI once to produce timings.json and count detections.
-    timings, detections := runOnceForTimingsAndDetections(cliArgs)
+    timings, detections := runOnceForTimingsAndDetections(cliArgs, opts)
 
     return runResult{
         Metadata:   meta,
@@ -273,7 +303,7 @@ func mustExecuteSuite(suite, runID, label, cliArgs string) runResult {
     }
 }
 
-func runBench(cliArgs string) benchStats {
+func runBench(cliArgs string, opts runOpts) benchStats {
     env := append(os.Environ(), "VLD_CLI_ARGS="+cliArgs)
     // Prefer a single iteration to reduce runtime noise; bench harness may still loop b.N internally.
     args := []string{"test", "-v", "-run", "^$", "-bench", "BenchmarkVideoLightningDetectorFromEnvArgs", "-benchmem", "-count", "1"}
@@ -283,7 +313,11 @@ func runBench(cliArgs string) benchStats {
     if err != nil {
         fatalf("go test bench failed: %v\n%s", err, out)
     }
-    return parseBench(string(out))
+    s := string(out)
+    if opts.echo {
+        fmt.Print(s)
+    }
+    return parseBench(s)
 }
 
 var benchLine = regexp.MustCompile(`(?m)^BenchmarkVideoLightningDetectorFromEnvArgs\S*\s+\d+\s+([0-9\.e\+]+)\s+ns/op(?:\s+([0-9\.e\+]+)\s+B/op)?(?:\s+([0-9\.e\+]+)\s+allocs/op)?$`)
@@ -306,7 +340,7 @@ func parseBench(output string) benchStats {
     return benchStats{NsPerOp: ns, BytesPerOp: b, AllocsPerOp: a}
 }
 
-func runOnceForTimingsAndDetections(cliArgs string) (timingsReport, int) {
+func runOnceForTimingsAndDetections(cliArgs string, opts runOpts) (timingsReport, int) {
     // Ensure export-timings and verbose for counting detections; ensure -f to skip exports.
     args := parseArgs(cliArgs)
     if !hasArg(args, "--export-timings") {
@@ -320,6 +354,9 @@ func runOnceForTimingsAndDetections(cliArgs string) (timingsReport, int) {
     }
 
     bin := filepath.Join(".", "bin", "video-lightning-detector")
+    if opts.echo {
+        fmt.Printf("detector> %s %s\n", bin, strings.Join(args, " "))
+    }
     cmd := exec.Command(bin, args...)
     stdout, err := cmd.StdoutPipe()
     if err != nil {
@@ -329,7 +366,11 @@ func runOnceForTimingsAndDetections(cliArgs string) (timingsReport, int) {
     if err := cmd.Start(); err != nil {
         fatalf("failed to start detector: %v", err)
     }
-    detections := countDetections(stdout)
+    var reader io.Reader = stdout
+    if opts.stream {
+        reader = io.TeeReader(stdout, os.Stdout)
+    }
+    detections := countDetections(reader)
     if err := cmd.Wait(); err != nil {
         fatalf("detector failed: %v", err)
     }

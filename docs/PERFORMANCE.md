@@ -91,6 +91,10 @@ bin/vld-perf run long_pos  --label baseline --as-baseline
 - Iterate and auto‑compare to baseline
 ```
 bin/vld-perf run short_pos --label opt1
+# Helpful flags:
+#   --verbose   prints env (VLD_CLI_ARGS) and more context
+#   --quiet     suppresses command echo
+#   --no-stream disables streaming detector output to your terminal
 ```
 Shows deltas for: total_ms, analysis_ms, detection_ms, ns/op, B/op, allocs/op.
 
