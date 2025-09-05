@@ -15,7 +15,7 @@ type DetectorOptions struct {
 	Denoise                                     bool
 	FrameScalingFactor                          float64
 	// When true, suppress per-frame positive detection Info logs while keeping progress bars and summaries.
-	QuietDetections                             bool
+	QuietDetections bool
 }
 
 // Return a boolean value representing if the detector options are valid. If any validation errors occured
