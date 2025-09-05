@@ -1,66 +1,76 @@
 # Performance & Measurement
 
-Purpose: document current benchmarking, timing, and profiling capabilities; provide repeatable commands to capture baselines; outline next steps for deeper optimization work.
+Purpose: clear guidance to measure performance, compare changes, and identify bottlenecks quickly.
 
-## What Exists Today
-- Benchmark harness: `main_test.go` defines `BenchmarkVideoLightningDetectorFromEnvArgs` that reads CLI args from the environment variable `VLD_CLI_ARGS` and executes the CLI via `cmd.Execute(...)`.
-- Stage timing logs: `internal/detector/detector.go` logs total runtime (Info) and per‑stage durations (Debug) for:
-  - Video analysis
-  - Auto thresholds
-  - Video detection
-  - Frames export
-- Progress/Spinner with timers: `internal/render/render.go` spinners show elapsed time; progress bars track counts.
-- Profiling via `go test` flags: use `-cpuprofile` and `-memprofile` to produce CPU and memory profiles for benchmarks.
-- Coverage: standard `go test -coverprofile coverage.out` flow; view with `go tool cover -html`.
+## What To Measure
+- Wall‑clock time: total runtime and per‑stage durations.
+- CPU and memory: where time and allocations go.
+- Result stability: detection behavior remains consistent while optimizing.
 
-## Baseline: Quick Timing (per‑stage)
-- See stage durations with verbose logging and skip slow exports to focus on compute cost:
+## Options (complementary)
+- CLI logs (quick triage)
+  - Total time at Info; per‑stage durations at Debug.
+  - Use for fast, coarse bottleneck identification.
+- Machine‑readable timings
+  - Flag: `--export-timings` writes `timings.json` with per‑stage and total durations (ms) in the output directory.
+  - Use for automated comparisons and artifact tracking.
+- End‑to‑end benchmark (Go test)
+  - `main_test.go` reads `VLD_CLI_ARGS` and runs the CLI repeatedly; supports quoted paths.
+  - Use `-benchmem` and `-count` for stable numbers and allocation stats.
+- CPU/Mem profiling (Go toolchain)
+  - `-cpuprofile cpu.prof -memprofile mem.prof` with the benchmark.
+  - Inspect with `go tool pprof -text cpu.prof` and `go tool pprof -text mem.prof`. SVGs optional if Graphviz‑enabled pprof is available.
+- Microbenchmarks (hotspots)
+  - `internal/utils/bench_test.go` covers `ScaleImage` and `BlurImage`.
+  - Use to evaluate low‑level changes without full pipeline variance.
+- Not a metric: progress bars/spinners
+  - Spinners show elapsed time for UX only. Do not use them for measurements or comparisons.
+
+## Quick Baselines
+- Per‑stage timing via CLI (skip export to isolate compute)
 ```
 ./bin/video-lightning-detector \
   -i resources/samples/sample_yes.mp4 \
   -o ./runs/baseline \
-  -a -s 0.4 -v -f
+  -a -s 0.4 -v -f --export-timings
 ```
+Check `runs/baseline/timings.json` and Info/Debug logs.
 
-## Baseline: End‑to‑End Benchmark
-1) Set CLI arguments for the benchmark harness (short positive sample, export disabled):
+- End‑to‑end benchmark with memory stats
 ```
 export VLD_CLI_ARGS='-i resources/samples/sample_yes.mp4 -o ./runs/bench -a -s 0.4 -f'
-```
-2) Run benchmarks with memory stats and multiple iterations:
-```
-go test -v -run ^$ -bench . -benchmem -count 5
+go test -v -run ^$ -bench BenchmarkVideoLightningDetectorFromEnvArgs -benchmem -count 5
 ```
 
-## Profiling (CPU/Mem)
-- Produce profiles while running the benchmark:
+- Profiling alongside the benchmark
 ```
-go test -v -run ^$ -bench . -cpuprofile cpu.prof -memprofile mem.prof
-```
-- Inspect profiles (examples):
-```
+go test -v -run ^$ -bench BenchmarkVideoLightningDetectorFromEnvArgs -cpuprofile cpu.prof -memprofile mem.prof
 go tool pprof -text cpu.prof
 go tool pprof -text mem.prof
 ```
-- Optional SVGs (requires Graphviz-enabled pprof):
-```
-go tool pprof -svg -output cpu-profile.svg cpu.prof
-go tool pprof -svg -output mem-profile.svg mem.prof
-```
 
-## Heavier Sample (longer video)
-- Use the bundled longer clip to stress the pipeline:
+- Heavier sample (longer clip)
 ```
 export VLD_CLI_ARGS='-i "resources/samples/sample 1.mp4" -o ./runs/bench-long -a -s 0.4 -f'
-go test -v -run ^$ -bench . -benchmem
+go test -v -run ^$ -bench BenchmarkVideoLightningDetectorFromEnvArgs -benchmem
 ```
 
-## Gaps and Next Steps
-- Microbenchmarks: add focused benches for hotspots (`utils.ScaleImage`, per‑frame differencing, blur/thresholding) to evaluate algorithmic or SIMD changes.
-- CLI pprof flags (optional): add `--profile-cpu` / `--profile-mem` so profiles can be captured outside `go test`.
-- Timing summary export: write a concise `timings.json` to the output directory with per‑stage and total durations for automated tracking.
-- CI/nightly bench (optional): a manual workflow that sets `VLD_CLI_ARGS`, runs benches and uploads `cpu.prof`/`mem.prof` artifacts.
+- Microbenchmarks only
+```
+go test -run ^$ -bench '^Benchmark(ScaleImage|BlurImage)' -benchmem -count 10
+```
 
-## Suggested Branch for Follow‑up
-- `feature/benchmarks-baseline` to add microbenches and (optionally) timing summary export.
+## Convenience Script
+Use `scripts/bench.sh` as a wrapper for repeatable local runs.
+- Defaults: `VLD_CLI_ARGS='-i resources/samples/sample_yes.mp4 -o runs/bench -a -s 0.4 -f'`
+- Customize: `COUNT=7`, `PROFILE=1`, or change `VLD_CLI_ARGS`.
+- Example: `COUNT=5 PROFILE=1 ./scripts/bench.sh`
 
+## Guardrails for Quality
+- Quick: count Info logs `Frame meets the threshold requirements.` to catch obvious regressions.
+- Deeper: use `-e -j -r` to export CSV/JSON/HTML and compare statistics when needed.
+
+## Next Steps (optional)
+- Add microbenches for frame differencing and thresholding.
+- Add CLI pprof flags to capture profiles outside `go test`.
+- Consider a manual CI bench that uploads `cpu.prof` and `mem.prof` artifacts.
