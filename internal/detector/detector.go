@@ -50,43 +50,67 @@ func (detector *detector) Run(inputVideoPath, outputDirectoryPath string) error 
 	runTime := time.Now()
 	detector.renderer.LogInfo("Starting the lightning hunt.")
 
+	timings := make(map[string]time.Duration)
+
+	t0 := time.Now()
 	frames, err := detector.performVideoAnalysis(inputVideoPath)
 	if err != nil {
 		return fmt.Errorf("detector: video analysis stage failed: %w", err)
 	}
+	timings["video_analysis"] = time.Since(t0)
 
 	if detector.options.AutoThresholds {
+		t1 := time.Now()
 		detector.applyAutoThresholds(frames)
+		timings["auto_thresholds"] = time.Since(t1)
 	}
 
 	detector.performStatisticsLogging(frames)
+
+	t2 := time.Now()
 	detections := detector.performVideoDetection(frames)
+	timings["video_detection"] = time.Since(t2)
 
 	if !detector.options.SkipFramesExport {
+		t3 := time.Now()
 		if err := detector.performFramesExport(inputVideoPath, outputDirectoryPath, detections); err != nil {
 			return fmt.Errorf("detector: failed to perform the detected frames images export: %w", err)
 		}
+		timings["frames_export"] = time.Since(t3)
 	}
 
 	if detector.options.ExportCsvReport {
+		t4 := time.Now()
 		if err := detector.handleCsvReportExport(outputDirectoryPath, frames); err != nil {
 			return fmt.Errorf("detector: csv report export failed: %w", err)
 		}
+		timings["csv_report"] = time.Since(t4)
 	}
 
 	if detector.options.ExportJsonReport {
+		t5 := time.Now()
 		if err := detector.handleJsonReportExport(outputDirectoryPath, frames); err != nil {
 			return fmt.Errorf("detector: json report export failed: %w", err)
 		}
+		timings["json_report"] = time.Since(t5)
 	}
 
 	if detector.options.ExportChartReport {
+		t6 := time.Now()
 		if err := detector.handleChartReportExport(outputDirectoryPath, frames); err != nil {
 			return fmt.Errorf("detector: chart report export failed: %w", err)
 		}
+		timings["chart_report"] = time.Since(t6)
 	}
 
-	detector.renderer.LogInfo("Lightning hunting took: %s", time.Since(runTime))
+	total := time.Since(runTime)
+	detector.renderer.LogInfo("Lightning hunting took: %s", total)
+
+	if detector.options.ExportTimingsReport {
+		if err := writeTimingsJSON(outputDirectoryPath, total, timings); err != nil {
+			return fmt.Errorf("detector: timings export failed: %w", err)
+		}
+	}
 	return nil
 }
 
@@ -230,7 +254,10 @@ func (detector *detector) performVideoDetection(framesCollection *frame.FramesCo
 
 	for frameIndex, frame := range frames {
 		logPrefix := fmt.Sprintf("Frame: [%d/%d].", frameIndex+1, len(frames))
-		detector.renderer.LogDebug("%s Checking frame thresholds.", logPrefix)
+		// In quiet-detections mode, suppress the low-value per-frame "Checking" debug line
+		if !detector.options.QuietDetections {
+			detector.renderer.LogDebug("%s Checking frame thresholds.", logPrefix)
+		}
 
 		if frame.Brightness < detector.options.BrightnessDetectionThreshold+statistics.BrightnessMovingMean[frameIndex] {
 			detector.renderer.LogDebug("%s Frame brightenss requirements not met. (%f < %f + %f)",
@@ -268,7 +295,10 @@ func (detector *detector) performVideoDetection(framesCollection *frame.FramesCo
 			continue
 		}
 
-		detector.renderer.LogInfo("%s Frame meets the threshold requirements.", logPrefix)
+		// Gate per-frame positive logs behind quiet option to reduce verbosity
+		if !detector.options.QuietDetections {
+			detector.renderer.LogInfo("%s Frame meets the threshold requirements.", logPrefix)
+		}
 		detections.Append(frameIndex, true)
 
 		progressBarStep()
@@ -276,7 +306,11 @@ func (detector *detector) performVideoDetection(framesCollection *frame.FramesCo
 
 	progressBarClose()
 	detector.renderer.LogDebug("Video detection stage finished. Stage took: %s", time.Since(videoDetectionTime))
-	return detections.Resolve()
+
+	resolved := detections.Resolve()
+	// Always emit a single-line machine-readable summary for total detections
+	detector.renderer.LogInfo("Detections: %d", len(resolved))
+	return resolved
 }
 
 // Helper function used to export frames which meet the requirement thresholds to png files.

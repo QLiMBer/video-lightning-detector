@@ -10,9 +10,12 @@ type DetectorOptions struct {
 	ExportCsvReport                             bool
 	ExportJsonReport                            bool
 	ExportChartReport                           bool
+	ExportTimingsReport                         bool
 	SkipFramesExport                            bool
 	Denoise                                     bool
 	FrameScalingFactor                          float64
+	// When true, suppress per-frame positive detection Info logs while keeping progress bars and summaries.
+	QuietDetections bool
 }
 
 // Return a boolean value representing if the detector options are valid. If any validation errors occured
@@ -49,8 +52,10 @@ func GetDefaultDetectorOptions() DetectorOptions {
 		ExportCsvReport:                             false,
 		ExportJsonReport:                            false,
 		ExportChartReport:                           false,
+		ExportTimingsReport:                         false,
 		SkipFramesExport:                            false,
 		Denoise:                                     false,
 		FrameScalingFactor:                          0.5,
+		QuietDetections:                             false,
 	}
 }

@@ -19,6 +19,11 @@ This project is a CLI tool that allows to analyze video recordings in order to d
 
 We can enter the appropriate threshold values for the above parameters to fine-tune the detection, or we can let the program decide itself (based on all the collected data) which threshold values will be appropriate. The auto-detection system uses descriptive statistics and methods such as moving average to determine the threshold values. For a broader analysis of the recordings, it is possible to export all parameters in CSV and JSON format, which allows graph generation and further work with the data. In order to increase the precision of the detections, we can also apply de-noising, and to increase performance, we can apply frame scaling.
 
+## Performance & Measurement
+- For benchmarks, profiling, and timing guidance, see [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
+- Perf results system (runs + compare): see [docs/PERFORMANCE.md#perf-results-system-runs--compare](docs/PERFORMANCE.md#perf-results-system-runs--compare).
+ - Quieter runs: add `--quiet-detections` for concise output plus a final `Detections: N` summary.
+
 # Requirements and installation
 Required software for the manual, self‑contained workflow:
 - **git** – clone the repository.
@@ -146,12 +151,14 @@ Flags:
   -r, --export-chart-report                           Value indicating if the frames statistics chart in HTML format should be exported.
   -e, --export-csv-report                             Value indicating if the frames statistics report in CSV format should be exported.
   -j, --export-json-report                            Value indicating if the frames statistics report in JSON format should be exported.
+      --export-timings                                Export per-stage and total timings as timings.json into the output directory.
   -h, --help                                          help for video-ligtning-detector
   -i, --input-video-path string                       Input video to perform the lightning detection.
   -m, --moving-mean-resolution int32                  The number of elements of the subset on which the moving mean will be calculated, for each parameter. (default 50)
   -o, --output-directory-path string                  Output directory to store detected frames.
   -s, --scaling-factor float                          The frame scaling factor used to downscale frames for better performance. (default 0.5)
   -f, --skip-frames-export                            Value indicating if the detected frames should not be exported.
+      --quiet-detections                              Suppress per-frame detection Info logs; keep progress bars and final summary.
   -v, --verbose                                       Enable verbose logging.
 ```
 
