@@ -10,6 +10,7 @@ type DetectorOptions struct {
 	ExportCsvReport                             bool
 	ExportJsonReport                            bool
 	ExportChartReport                           bool
+	ExportTimingsReport                         bool
 	SkipFramesExport                            bool
 	Denoise                                     bool
 	FrameScalingFactor                          float64
@@ -49,6 +50,7 @@ func GetDefaultDetectorOptions() DetectorOptions {
 		ExportCsvReport:                             false,
 		ExportJsonReport:                            false,
 		ExportChartReport:                           false,
+		ExportTimingsReport:                         false,
 		SkipFramesExport:                            false,
 		Denoise:                                     false,
 		FrameScalingFactor:                          0.5,

@@ -89,6 +89,13 @@ func init() {
 		DetectorOptions.ExportChartReport,
 		"Value indicating if the frames statistics chart in HTML format should be exported.")
 
+	// Long-only flag to export a concise timings summary (JSON) alongside other outputs.
+	rootCmd.PersistentFlags().BoolVar(
+		&DetectorOptions.ExportTimingsReport,
+		"export-timings",
+		DetectorOptions.ExportTimingsReport,
+		"Export per-stage and total timings as timings.json into the output directory.")
+
 	rootCmd.PersistentFlags().Float64VarP(
 		&DetectorOptions.FrameScalingFactor,
 		"scaling-factor", "s",

@@ -19,6 +19,10 @@ This project is a CLI tool that allows to analyze video recordings in order to d
 
 We can enter the appropriate threshold values for the above parameters to fine-tune the detection, or we can let the program decide itself (based on all the collected data) which threshold values will be appropriate. The auto-detection system uses descriptive statistics and methods such as moving average to determine the threshold values. For a broader analysis of the recordings, it is possible to export all parameters in CSV and JSON format, which allows graph generation and further work with the data. In order to increase the precision of the detections, we can also apply de-noising, and to increase performance, we can apply frame scaling.
 
+## Performance & Measurement
+- For benchmarks, profiling, and timing guidance, see [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
+- Perf results system (runs + compare): see [docs/PERFORMANCE.md#perf-results-system-runs--compare](docs/PERFORMANCE.md#perf-results-system-runs--compare).
+
 # Requirements and installation
 Required software for the manual, self‑contained workflow:
 - **git** – clone the repository.

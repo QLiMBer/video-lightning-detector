@@ -1,0 +1,6 @@
+{
+  "short_pos": "-i resources/samples/sample_yes.mp4 -o runs/perf -a -s 0.4 -f",
+  "short_neg": "-i resources/samples/sample_no.mp4 -o runs/perf -a -s 0.4 -f",
+  "long_pos":  "-i \"resources/samples/sample 1.mp4\" -o runs/perf -a -s 0.4 -f"
+}
+
