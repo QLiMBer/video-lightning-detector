@@ -140,9 +140,8 @@ func runCLI(b *testing.B, args []string) {
 
 // BenchmarkVideoLightningDetectorFromEnvArgs runs end-to-end benches using VLD_CLI_ARGS.
 // Example:
-//
-//	export VLD_CLI_ARGS='-i resources/samples/sample_yes.mp4 -o ./runs/bench -a -s 0.4 -f'
-//	go test -v -run ^$ -bench BenchmarkVideoLightningDetectorFromEnvArgs -benchmem -count 5
+//   export VLD_CLI_ARGS='-i resources/samples/sample_yes.mp4 -o ./runs/bench -a -s 0.4 -f'
+//   go test -v -run ^$ -bench BenchmarkVideoLightningDetectorFromEnvArgs -benchmem -count 5
 func BenchmarkVideoLightningDetectorFromEnvArgs(b *testing.B) {
 	raw := os.Getenv("VLD_CLI_ARGS")
 	if raw == "" {

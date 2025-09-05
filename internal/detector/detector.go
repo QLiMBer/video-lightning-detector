@@ -1,12 +1,12 @@
 package detector
 
 import (
-	"errors"
-	"fmt"
-	"image"
-	"path"
-	"strconv"
-	"time"
+    "errors"
+    "fmt"
+    "image"
+    "path"
+    "strconv"
+    "time"
 
 	vidio "github.com/AlexEidt/Vidio"
 	"github.com/Krzysztofz01/video-lightning-detector/internal/frame"
@@ -47,10 +47,10 @@ func CreateDetector(renderer render.Renderer, options DetectorOptions) (Detector
 
 // Perform a lightning detection on the provided video specified by the file path and store the results at the specified directory path.
 func (detector *detector) Run(inputVideoPath, outputDirectoryPath string) error {
-	runTime := time.Now()
-	detector.renderer.LogInfo("Starting the lightning hunt.")
+    runTime := time.Now()
+    detector.renderer.LogInfo("Starting the lightning hunt.")
 
-	timings := make(map[string]time.Duration)
+    timings := make(map[string]time.Duration)
 
 	t0 := time.Now()
 	frames, err := detector.performVideoAnalysis(inputVideoPath)
@@ -111,7 +111,7 @@ func (detector *detector) Run(inputVideoPath, outputDirectoryPath string) error 
 			return fmt.Errorf("detector: timings export failed: %w", err)
 		}
 	}
-	return nil
+    return nil
 }
 
 // Helper function used to iterate over the video frames in order to generate a collection of frames instances containing

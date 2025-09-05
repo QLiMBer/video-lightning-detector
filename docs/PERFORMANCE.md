@@ -119,7 +119,6 @@ bin/vld-perf rm short_pos <run-id>
   - Run ID: `YYYYMMDD-HHMMSS_<label>` (choose a meaningful `--label`).
   - Stored at: `perf-results/<suite>/<run-id>.json` with metadata (commit, branch, go/ffmpeg, OS/arch, suite name, exact CLI args), timings (total + stages), Go bench stats (ns/op, B/op, allocs/op), and detection count (from Info logs).
   - Baseline pointer: `perf-results/<suite>/baseline.json`.
-
 ## Guardrails for Quality
 - Quick: count Info logs `Frame meets the threshold requirements.` to catch obvious regressions.
 - Deeper: use `-e -j -r` to export CSV/JSON/HTML and compare statistics when needed.
