@@ -1,5 +1,7 @@
 # Performance & Measurement
 
+> Note: The code is being aligned with this document; some features (quiet detections, single-line "Detections: N", vld-perf parsing/streaming) may still be rolling out on the `next` branch.
+
 Purpose: clear guidance to measure performance, compare changes, and identify bottlenecks quickly.
 
 ## What To Measure
