@@ -150,12 +150,14 @@ Flags:
   -r, --export-chart-report                           Value indicating if the frames statistics chart in HTML format should be exported.
   -e, --export-csv-report                             Value indicating if the frames statistics report in CSV format should be exported.
   -j, --export-json-report                            Value indicating if the frames statistics report in JSON format should be exported.
+      --export-timings                                Export per-stage and total timings as timings.json into the output directory.
   -h, --help                                          help for video-ligtning-detector
   -i, --input-video-path string                       Input video to perform the lightning detection.
   -m, --moving-mean-resolution int32                  The number of elements of the subset on which the moving mean will be calculated, for each parameter. (default 50)
   -o, --output-directory-path string                  Output directory to store detected frames.
   -s, --scaling-factor float                          The frame scaling factor used to downscale frames for better performance. (default 0.5)
   -f, --skip-frames-export                            Value indicating if the detected frames should not be exported.
+      --quiet-detections                              Suppress per-frame detection Info logs; keep progress bars and final summary.
   -v, --verbose                                       Enable verbose logging.
 ```
 

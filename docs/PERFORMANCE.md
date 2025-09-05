@@ -13,6 +13,7 @@ Purpose: clear guidance to measure performance, compare changes, and identify bo
   - Use for fast, coarse bottleneck identification.
 - Machine‑readable timings
   - Flag: `--export-timings` writes `timings.json` with per‑stage and total durations (ms) in the output directory.
+  - The detector prints a single-line summary `Detections: <N>` at the end of detection for concise counting.
   - Use for automated comparisons and artifact tracking.
 - End‑to‑end benchmark (Go test)
   - `main_test.go` reads `VLD_CLI_ARGS` and runs the CLI repeatedly; supports quoted paths.
@@ -32,9 +33,9 @@ Purpose: clear guidance to measure performance, compare changes, and identify bo
 ./bin/video-lightning-detector \
   -i resources/samples/sample_yes.mp4 \
   -o ./runs/baseline \
-  -a -s 0.4 -v -f --export-timings
+  -a -s 0.4 -f --export-timings --quiet-detections
 ```
-Check `runs/baseline/timings.json` and Info/Debug logs.
+Check `runs/baseline/timings.json`. For detection count prefer `Detections: N`.
 
 - End‑to‑end benchmark with memory stats
 ```
@@ -92,9 +93,11 @@ bin/vld-perf run long_pos  --label baseline --as-baseline
 ```
 bin/vld-perf run short_pos --label opt1
 # Helpful flags:
-#   --verbose   prints env (VLD_CLI_ARGS) and more context
-#   --quiet     suppresses command echo
-#   --no-stream disables streaming detector output to your terminal
+#   --verbose        prints env (VLD_CLI_ARGS) and more context
+#   --quiet          suppresses command echo
+#   --no-stream      disables streaming detector output to your terminal
+# Behavior: vld-perf streams detector output, auto-adds `--quiet-detections`,
+#           and prefers the final `Detections: N` summary when present.
 ```
 Shows deltas for: total_ms, analysis_ms, detection_ms, ns/op, B/op, allocs/op.
 
@@ -117,10 +120,10 @@ bin/vld-perf rm short_pos <run-id>
 
 - Run IDs and data captured
   - Run ID: `YYYYMMDD-HHMMSS_<label>` (choose a meaningful `--label`).
-  - Stored at: `perf-results/<suite>/<run-id>.json` with metadata (commit, branch, go/ffmpeg, OS/arch, suite name, exact CLI args), timings (total + stages), Go bench stats (ns/op, B/op, allocs/op), and detection count (from Info logs).
+  - Stored at: `perf-results/<suite>/<run-id>.json` with metadata (commit, branch, go/ffmpeg, OS/arch, suite name, exact CLI args), timings (total + stages), Go bench stats (ns/op, B/op, allocs/op), and detection count (from the `Detections: N` summary; falls back to per-frame positives if needed).
   - Baseline pointer: `perf-results/<suite>/baseline.json`.
 ## Guardrails for Quality
-- Quick: count Info logs `Frame meets the threshold requirements.` to catch obvious regressions.
+- Quick: use the single-line `Detections: N` to catch obvious regressions (avoid per-frame logs for totals).
 - Deeper: use `-e -j -r` to export CSV/JSON/HTML and compare statistics when needed.
 
 ## Next Steps (optional)
