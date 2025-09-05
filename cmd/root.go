@@ -96,19 +96,19 @@ func init() {
 		DetectorOptions.ExportChartReport,
 		"Value indicating if the frames statistics chart in HTML format should be exported.")
 
-	// Long-only flag to export a concise timings summary (JSON) alongside other outputs.
-	rootCmd.PersistentFlags().BoolVar(
-		&DetectorOptions.ExportTimingsReport,
-		"export-timings",
-		DetectorOptions.ExportTimingsReport,
-		"Export per-stage and total timings as timings.json into the output directory.")
+    // Long-only flag to export a concise timings summary (JSON) alongside other outputs.
+    rootCmd.PersistentFlags().BoolVar(
+        &DetectorOptions.ExportTimingsReport,
+        "export-timings",
+        DetectorOptions.ExportTimingsReport,
+        "Export per-stage and total timings as timings.json into the output directory.")
 
-	// Long-only flag to export a concise timings summary (JSON) alongside other outputs.
-	rootCmd.PersistentFlags().BoolVar(
-		&DetectorOptions.ExportTimingsReport,
-		"export-timings",
-		DetectorOptions.ExportTimingsReport,
-		"Export per-stage and total timings as timings.json into the output directory.")
+    // Extra quiet mode for detections: suppress per-frame positive Info logs to keep output concise.
+    rootCmd.PersistentFlags().BoolVar(
+        &DetectorOptions.QuietDetections,
+        "quiet-detections",
+        DetectorOptions.QuietDetections,
+        "Suppress per-frame detection Info logs; keep progress bars and final summary.")
 
 	rootCmd.PersistentFlags().Float64VarP(
 		&DetectorOptions.FrameScalingFactor,
