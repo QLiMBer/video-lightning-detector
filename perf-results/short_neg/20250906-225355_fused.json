@@ -1,0 +1,29 @@
+{
+    "metadata": {
+        "run_id": "20250906-225355_fused",
+        "suite": "short_neg",
+        "label": "fused",
+        "commit_sha": "55450b6",
+        "branch": "feature/perf-hotspots",
+        "go_version": "go version go1.22.5 linux/amd64",
+        "ffmpeg_version": "ffmpeg version 7.0.2-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2000-2024 the FFmpeg developers",
+        "os": "linux",
+        "arch": "amd64",
+        "cli_args": "-i resources/samples/sample_no.mp4 -o runs/perf -a -s 0.4 -f",
+        "timestamp_iso": "2025-09-06T22:53:55+02:00"
+    },
+    "timings_ms": {
+        "total_ms": 851.73,
+        "stages_ms": {
+            "auto_thresholds": 0.02,
+            "video_analysis": 851.613,
+            "video_detection": 0.062
+        }
+    },
+    "bench": {
+        "ns_per_op": 882390152,
+        "bytes_per_op": 9632,
+        "allocs_per_op": 27
+    },
+    "detections": 0
+}

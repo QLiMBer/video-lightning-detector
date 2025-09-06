@@ -23,6 +23,7 @@ We can enter the appropriate threshold values for the above parameters to fine-t
 - For benchmarks, profiling, and timing guidance, see [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
 - Perf results system (runs + compare): see [docs/PERFORMANCE.md#perf-results-system-runs--compare](docs/PERFORMANCE.md#perf-results-system-runs--compare).
  - Quieter runs: add `--quiet-detections` for concise output plus a final `Detections: N` summary.
+ - No-UI for perf: add `--no-ui` to disable progress bars/spinners/tables and reduce terminal overhead during measurements.
 
 # Requirements and installation
 Required software for the manual, self‑contained workflow:
@@ -159,6 +160,7 @@ Flags:
   -s, --scaling-factor float                          The frame scaling factor used to downscale frames for better performance. (default 0.5)
   -f, --skip-frames-export                            Value indicating if the detected frames should not be exported.
       --quiet-detections                              Suppress per-frame detection Info logs; keep progress bars and final summary.
+      --no-ui                                         Disable progress bars, spinners, and table output (reduce terminal overhead).
   -v, --verbose                                       Enable verbose logging.
 ```
 
@@ -189,6 +191,11 @@ go build -v -o bin/video-lightning-detector .
 
 # 5) Run a test scenario
 ./bin/video-lightning-detector -i resources/samples/sample_yes.mp4 -o ./runs/dev -a -s 0.4
+```
+
+For performance-focused runs, prefer suppressing UI noise and writing timings:
+```sh
+./bin/video-lightning-detector -i resources/samples/sample_yes.mp4 -o ./runs/perf -a -s 0.4 -f --export-timings --quiet-detections --no-ui
 ```
 
 Profiling and coverage (optional):

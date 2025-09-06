@@ -16,6 +16,7 @@ Purpose: clear guidance to measure performance, compare changes, and identify bo
   - The detector prints a single-line summary `Detections: <N>` at the end of detection for concise counting.
   - Use for automated comparisons and artifact tracking.
   - Quiet detections: `--quiet-detections` hides per-frame positive lines ("Frame meets the threshold requirements.") and the low-value debug line ("Checking frame thresholds."), while keeping failure reasons available under `-v/--verbose`.
+  - No UI: `--no-ui` disables progress bars, spinners, and table output to reduce terminal overhead during perf runs; log lines remain.
 - End‑to‑end benchmark (Go test)
   - `main_test.go` reads `VLD_CLI_ARGS` and runs the CLI repeatedly; supports quoted paths.
   - Use `-benchmem` and `-count` for stable numbers and allocation stats.
@@ -34,7 +35,7 @@ Purpose: clear guidance to measure performance, compare changes, and identify bo
 ./bin/video-lightning-detector \
   -i resources/samples/sample_yes.mp4 \
   -o ./runs/baseline \
-  -a -s 0.4 -f --export-timings --quiet-detections
+  -a -s 0.4 -f --export-timings --quiet-detections --no-ui
 ```
 Check `runs/baseline/timings.json`. For detection count prefer `Detections: N`.
 
@@ -97,10 +98,11 @@ bin/vld-perf run short_pos --label opt1
 #   --verbose        prints env (VLD_CLI_ARGS) and more context
 #   --quiet          suppresses command echo
 #   --no-stream      disables streaming detector output to your terminal
-# Behavior: vld-perf streams detector output, auto-adds `--quiet-detections`,
+# Behavior: vld-perf streams detector output, auto-adds `--quiet-detections` and `--no-ui`,
 #           and prefers the final `Detections: N` summary when present.
 ```
 Shows deltas for: total_ms, analysis_ms, detection_ms, ns/op, B/op, allocs/op.
+Also shows detections count changes.
 
 - Compare historic runs
 ```

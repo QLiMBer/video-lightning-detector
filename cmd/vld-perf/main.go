@@ -378,6 +378,9 @@ func runOnceForTimingsAndDetections(cliArgs string, opts runOpts) (timingsReport
 	if !hasArg(args, "--quiet-detections") {
 		args = append(args, "--quiet-detections")
 	}
+	if !hasArg(args, "--no-ui") {
+		args = append(args, "--no-ui")
+	}
 
 	bin := filepath.Join(".", "bin", "video-lightning-detector")
 	if opts.echo {
@@ -412,6 +415,9 @@ func runOnceForTimingsAndDetections(cliArgs string, opts runOpts) (timingsReport
 	<-done
 
 	outStr := buf.String()
+	// Normalize stream output for parsing: strip ANSI escapes and normalize CRs.
+	outStr = stripANSI(outStr)
+	outStr = strings.ReplaceAll(outStr, "\r", "\n")
 	detections := parseDetections(outStr)
 
 	// Find output directory to read timings.json
@@ -433,6 +439,11 @@ func runOnceForTimingsAndDetections(cliArgs string, opts runOpts) (timingsReport
 }
 
 var summaryRe = regexp.MustCompile(`(?m)^Detections:\s+(\d+)\s*$`)
+var ansiRe = regexp.MustCompile("\u001B\\[[0-9;]*[A-Za-z]")
+
+func stripANSI(s string) string {
+	return ansiRe.ReplaceAllString(s, "")
+}
 
 func parseDetections(output string) int {
 	if m := summaryRe.FindStringSubmatch(output); len(m) == 2 {
@@ -539,6 +550,12 @@ func printComparison(lhsID string, lhs runResult, rhsID string, rhs runResult, t
 	cmp("ns/op", lhs.Bench.NsPerOp, rhs.Bench.NsPerOp)
 	cmp("B/op", lhs.Bench.BytesPerOp, rhs.Bench.BytesPerOp)
 	cmp("allocs/op", lhs.Bench.AllocsPerOp, rhs.Bench.AllocsPerOp)
+	// Always show detection counts; do not apply regression threshold semantics.
+	detFlag := ""
+	if lhs.Detections != rhs.Detections {
+		detFlag = "  CHANGED"
+	}
+	fmt.Printf("- %-20s: %d -> %d%s\n", "detections", lhs.Detections, rhs.Detections, detFlag)
 }
 
 func runCmdOutSilent(name string, args ...string) string {

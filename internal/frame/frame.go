@@ -3,12 +3,11 @@ package frame
 import (
 	"image"
 	"image/color"
+	"runtime"
 	"strconv"
 	"sync"
 
-	"github.com/Krzysztofz01/pimit"
 	"github.com/Krzysztofz01/video-lightning-detector/internal/utils"
-	"go.uber.org/atomic"
 )
 
 const (
@@ -33,74 +32,179 @@ func CreateNewFrame(currentFrame, previousFrame image.Image, ordinalNumber int) 
 		OrdinalNumber: ordinalNumber,
 	}
 
-	wg := sync.WaitGroup{}
-	wg.Add(3)
-
-	go func() {
-		defer wg.Done()
-
-		frame.Brightness = calculateFrameBrightness(currentFrame)
-	}()
-
-	go func() {
-		defer wg.Done()
-		if ordinalNumber == 1 {
-			frame.ColorDifference = 0.0
-			return
+	// Prefer a fused single-pass compute on RGBA for performance; fallback to the legacy path otherwise.
+	if cur, ok := currentFrame.(*image.RGBA); ok {
+		var prev *image.RGBA
+		if ordinalNumber > 1 {
+			if p, ok2 := previousFrame.(*image.RGBA); ok2 {
+				prev = p
+			} else {
+				// Fallback when previous is not RGBA.
+				goto legacy
+			}
 		}
 
-		frame.ColorDifference = calculateFramesColorDifference(currentFrame, previousFrame)
-	}()
+		br, cd, bt := computeFrameMetricsRGBA(cur, prev)
+		frame.Brightness = br
+		frame.ColorDifference = cd
+		frame.BinaryThresholdDifference = bt
+		return frame
+	}
 
-	go func() {
-		defer wg.Done()
-		if ordinalNumber == 1 {
-			frame.BinaryThresholdDifference = 0.0
-			return
-		}
-
-		frame.BinaryThresholdDifference = calculateFramesBinaryThresholdDifference(currentFrame, previousFrame)
-	}()
-
-	wg.Wait()
+legacy:
+	// Legacy path: preserve behavior using simple sequential loops.
+	frame.Brightness = calculateFrameBrightnessLegacy(currentFrame)
+	if ordinalNumber == 1 {
+		frame.ColorDifference = 0.0
+		frame.BinaryThresholdDifference = 0.0
+	} else {
+		frame.ColorDifference = calculateFramesColorDifferenceLegacy(currentFrame, previousFrame)
+		frame.BinaryThresholdDifference = calculateFramesBinaryThresholdDifferenceLegacy(currentFrame, previousFrame)
+	}
 	return frame
 }
 
-func calculateFrameBrightness(currentFrame image.Image) float64 {
-	brightness := atomic.NewFloat64(0.0)
-	pimit.ParallelRead(currentFrame, func(_, _ int, c color.Color) {
-		brightness.Add(utils.GetColorBrightness(c))
-	})
+// Fused single-pass compute over RGBA with row/stripe workers and per-worker accumulators.
+// prev may be nil (for the first frame), in which case diffs are zero.
+func computeFrameMetricsRGBA(cur *image.RGBA, prev *image.RGBA) (brightness float64, colorDiff float64, btDiff float64) {
+	b := cur.Bounds()
+	w, h := b.Dx(), b.Dy()
+	if w == 0 || h == 0 {
+		return 0, 0, 0
+	}
 
-	frameSize := currentFrame.Bounds().Dx() * currentFrame.Bounds().Dy()
-	return brightness.Load() / float64(frameSize)
+	workers := runtime.GOMAXPROCS(0)
+	if workers < 1 {
+		workers = 1
+	}
+	if workers > h {
+		workers = h
+	}
+
+	type part struct {
+		br, cd float64
+		bt     int
+	}
+	parts := make([]part, workers)
+	var wg sync.WaitGroup
+	wg.Add(workers)
+	for i := 0; i < workers; i++ {
+		i := i
+		y0 := (h * i) / workers
+		y1 := (h * (i + 1)) / workers
+		go func() {
+			defer wg.Done()
+			stride := cur.Stride
+			var pStride int
+			if prev != nil {
+				pStride = prev.Stride
+			}
+			local := part{}
+			for y := y0; y < y1; y++ {
+				off := y*stride + 0
+				var pOff int
+				if prev != nil {
+					pOff = y*pStride + 0
+				}
+				for x := 0; x < w; x++ {
+					r := cur.Pix[off+0]
+					g := cur.Pix[off+1]
+					b := cur.Pix[off+2]
+					// Brightness: match utils.GetColorBrightness by passing color.RGBA
+					local.br += utils.GetColorBrightness(color.RGBA{R: r, G: g, B: b, A: 255})
+
+					if prev != nil {
+						pr := prev.Pix[pOff+0]
+						pg := prev.Pix[pOff+1]
+						pb := prev.Pix[pOff+2]
+						// Color diff
+						local.cd += utils.GetColorDifference(
+							color.RGBA{R: r, G: g, B: b, A: 255},
+							color.RGBA{R: pr, G: pg, B: pb, A: 255},
+						)
+						// Binary threshold difference
+						if utils.BinaryThreshold(color.RGBA{R: r, G: g, B: b, A: 255}, BinaryThresholdParam) !=
+							utils.BinaryThreshold(color.RGBA{R: pr, G: pg, B: pb, A: 255}, BinaryThresholdParam) {
+							local.bt++
+						}
+					}
+					off += 4
+					if prev != nil {
+						pOff += 4
+					}
+				}
+			}
+			parts[i] = local
+		}()
+	}
+	wg.Wait()
+
+	var brSum, cdSum float64
+	var btSum int
+	for _, p := range parts {
+		brSum += p.br
+		cdSum += p.cd
+		btSum += p.bt
+	}
+	size := float64(w * h)
+	brightness = brSum / size
+	if prev != nil {
+		colorDiff = cdSum / size
+		btDiff = float64(btSum) / size
+	} else {
+		colorDiff = 0
+		btDiff = 0
+	}
+	return
 }
 
-func calculateFramesColorDifference(currentFrame, previousFrame image.Image) float64 {
-	difference := atomic.NewFloat64(0.0)
-	pimit.ParallelRead(currentFrame, func(x, y int, currentFrameColor color.Color) {
-		previousFrameColor := previousFrame.At(x, y)
-
-		difference.Add(utils.GetColorDifference(currentFrameColor, previousFrameColor))
-	})
-
-	frameSize := currentFrame.Bounds().Dx() * currentFrame.Bounds().Dy()
-	return difference.Load() / float64(frameSize)
-}
-
-func calculateFramesBinaryThresholdDifference(currentFrame, previousFrame image.Image) float64 {
-	difference := atomic.NewInt32(0)
-	pimit.ParallelRead(currentFrame, func(x, y int, currentFrameColor color.Color) {
-		thresholdCurrent := utils.BinaryThreshold(currentFrameColor, BinaryThresholdParam)
-		thresholdPrevious := utils.BinaryThreshold(previousFrame.At(x, y), BinaryThresholdParam)
-
-		if thresholdCurrent != thresholdPrevious {
-			difference.Add(1)
+// Legacy sequential implementations used when images are not RGBA.
+func calculateFrameBrightnessLegacy(currentFrame image.Image) float64 {
+	b := currentFrame.Bounds()
+	w, h := b.Dx(), b.Dy()
+	if w == 0 || h == 0 {
+		return 0
+	}
+	sum := 0.0
+	for y := b.Min.Y; y < b.Max.Y; y++ {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			sum += utils.GetColorBrightness(currentFrame.At(x, y))
 		}
-	})
+	}
+	return sum / float64(w*h)
+}
 
-	frameSize := currentFrame.Bounds().Dx() * currentFrame.Bounds().Dy()
-	return float64(difference.Load()) / float64(frameSize)
+func calculateFramesColorDifferenceLegacy(currentFrame, previousFrame image.Image) float64 {
+	b := currentFrame.Bounds()
+	w, h := b.Dx(), b.Dy()
+	if w == 0 || h == 0 {
+		return 0
+	}
+	sum := 0.0
+	for y := b.Min.Y; y < b.Max.Y; y++ {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			sum += utils.GetColorDifference(currentFrame.At(x, y), previousFrame.At(x, y))
+		}
+	}
+	return sum / float64(w*h)
+}
+
+func calculateFramesBinaryThresholdDifferenceLegacy(currentFrame, previousFrame image.Image) float64 {
+	b := currentFrame.Bounds()
+	w, h := b.Dx(), b.Dy()
+	if w == 0 || h == 0 {
+		return 0
+	}
+	diff := 0
+	for y := b.Min.Y; y < b.Max.Y; y++ {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			if utils.BinaryThreshold(currentFrame.At(x, y), BinaryThresholdParam) !=
+				utils.BinaryThreshold(previousFrame.At(x, y), BinaryThresholdParam) {
+				diff++
+			}
+		}
+	}
+	return float64(diff) / float64(w*h)
 }
 
 // Convert the frame string buffer format accepted by the CSV encoder.
