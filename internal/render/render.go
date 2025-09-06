@@ -120,3 +120,51 @@ func (r *ptermRenderer) Table(data [][]string) {
 		panic(fmt.Errorf("render: failed to render the underlying table instance: %w", err))
 	}
 }
+
+// Create a renderer variant that suppresses progress bars, spinners, and tables.
+// It still prints log lines for Info/Warning/Error (and Debug when verbose).
+func CreateNoUIRenderer(verbose bool) Renderer {
+	// Keep colors and optional debug lines consistent with normal renderer.
+	pterm.EnableColor()
+	if verbose {
+		pterm.EnableDebugMessages()
+	}
+	return &noopUIRenderer{verbose: verbose}
+}
+
+type noopUIRenderer struct {
+	verbose bool
+}
+
+func (r *noopUIRenderer) LogDebug(format string, a ...any) {
+	if !r.verbose {
+		return
+	}
+	pterm.DefaultBasicText.WithStyle(&pterm.ThemeDefault.DescriptionMessageStyle).Printfln(format, a...)
+}
+
+func (r *noopUIRenderer) LogInfo(format string, a ...any) {
+	pterm.DefaultBasicText.WithStyle(&pterm.ThemeDefault.InfoMessageStyle).Printfln(format, a...)
+}
+
+func (r *noopUIRenderer) LogWarning(format string, a ...any) {
+	pterm.DefaultBasicText.WithStyle(&pterm.ThemeDefault.WarningMessageStyle).Printfln(format, a...)
+}
+
+func (r *noopUIRenderer) LogError(format string, a ...any) {
+	pterm.DefaultBasicText.WithStyle(&pterm.ThemeDefault.ErrorMessageStyle).Printfln(format, a...)
+}
+
+func (r *noopUIRenderer) Progress(_ string, _ int) (func(), func()) {
+	// No progress bar; return no-op step and stop.
+	return func() {}, func() {}
+}
+
+func (r *noopUIRenderer) Spinner(_ string) func() {
+	// No spinner; return no-op closer.
+	return func() {}
+}
+
+func (r *noopUIRenderer) Table(_ [][]string) {
+	// Suppressed in no-ui mode.
+}

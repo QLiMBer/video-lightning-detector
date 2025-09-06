@@ -6,99 +6,82 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"sync"
 )
 
 // Structure representing the collection of video frames.
+// Optimized for ordered access while preserving existing semantics:
+// - Allows out-of-order Append (by ordinal) but expects no gaps when exporting GetAll (same as previous behavior).
 type FramesCollection struct {
-	Frames                     map[int]*Frame
+	frames                     []*Frame
+	count                      int
 	cachedStatisticsValue      *FramesStatistics
 	cachedStatisticsResolution int
-	mu                         sync.RWMutex
 }
 
 // Create a new frames collection with a given capacity of frames.
 func CreateNewFramesCollection(frames int) *FramesCollection {
 	return &FramesCollection{
-		Frames:                     make(map[int]*Frame, frames),
+		frames:                     make([]*Frame, frames),
+		count:                      0,
 		cachedStatisticsValue:      nil,
 		cachedStatisticsResolution: 0,
-		mu:                         sync.RWMutex{},
 	}
 }
 
 // Add a new frame to the frames collection.
-func (frames *FramesCollection) Append(frame *Frame) error {
+func (fc *FramesCollection) Append(frame *Frame) error {
 	if frame == nil {
 		return errors.New("frame: can not appenda nil frame to the frames collection")
 	}
-
-	frames.mu.Lock()
-	defer frames.mu.Unlock()
-
-	if _, exists := frames.Frames[frame.OrdinalNumber]; exists {
+	idx := frame.OrdinalNumber - 1
+	if idx < 0 || idx >= len(fc.frames) {
+		return errors.New("frame: frame ordinal number out of bounds")
+	}
+	if fc.frames[idx] != nil {
 		return errors.New("frame: frame with a given ordinal number already exists")
 	}
-
-	frames.Frames[frame.OrdinalNumber] = frame
-	frames.cachedStatisticsValue = nil
-	frames.cachedStatisticsResolution = 0
+	fc.frames[idx] = frame
+	fc.count++
+	fc.cachedStatisticsValue = nil
+	fc.cachedStatisticsResolution = 0
 	return nil
 }
 
 // Get a frame from the frames collection by the frame ordinal number.
-func (frames *FramesCollection) Get(frameNumber int) (*Frame, error) {
-	frames.mu.RLock()
-	defer frames.mu.RUnlock()
-
-	if frame, exists := frames.Frames[frameNumber]; !exists {
+func (fc *FramesCollection) Get(frameNumber int) (*Frame, error) {
+	idx := frameNumber - 1
+	if idx < 0 || idx >= len(fc.frames) || fc.frames[idx] == nil {
 		return nil, errors.New("frame: frame with a given ordinal number does not exist")
-	} else {
-		return frame, nil
 	}
+	return fc.frames[idx], nil
 }
 
 // Get all frames sorted by the frame ordinal number.
-// TODO: Add tests
-func (frames *FramesCollection) GetAll() []*Frame {
-	frames.mu.RLock()
-	defer frames.mu.RUnlock()
-
-	return frames.mapFramesToSlice()
-}
-
-// Get all frames sorted by the frame ordinal nubmer. This function does not lock and should only be used intrnaly by the FramesCollection
-func (frames *FramesCollection) mapFramesToSlice() []*Frame {
-	values := make([]*Frame, len(frames.Frames))
-	for index := 0; index < len(frames.Frames); index += 1 {
-		frameNumber := index + 1
-		frame, ok := frames.Frames[frameNumber]
-		if !ok {
+// Preserves previous invariant: expects contiguous frames from 1..count; panics if a gap is detected.
+func (fc *FramesCollection) GetAll() []*Frame {
+	values := make([]*Frame, fc.count)
+	for i := 0; i < fc.count; i++ {
+		f := fc.frames[i]
+		if f == nil {
 			panic("frame: missing frame spotted during frames iteration")
 		}
-
-		values[index] = frame
+		values[i] = f
 	}
-
 	return values
 }
 
 // Calculate the descriptive statistics values for the given frames collection.
-func (frames *FramesCollection) CalculateStatistics(movingMeanResolution int) FramesStatistics {
-	frames.mu.RLock()
-	defer frames.mu.RUnlock()
-
-	if frames.cachedStatisticsValue == nil || frames.cachedStatisticsResolution != movingMeanResolution {
-		frames.cachedStatisticsValue = CreateNewFramesStatistics(frames.mapFramesToSlice(), movingMeanResolution)
-		frames.cachedStatisticsResolution = movingMeanResolution
+func (fc *FramesCollection) CalculateStatistics(movingMeanResolution int) FramesStatistics {
+	if fc.cachedStatisticsValue == nil || fc.cachedStatisticsResolution != movingMeanResolution {
+		fc.cachedStatisticsValue = CreateNewFramesStatistics(fc.GetAll(), movingMeanResolution)
+		fc.cachedStatisticsResolution = movingMeanResolution
 	}
-
-	return *frames.cachedStatisticsValue
+	return *fc.cachedStatisticsValue
 }
 
 // Write the JSON format frames report to the provided writer which can be a file reference.
-func (frames *FramesCollection) ExportJsonReport(file io.Writer) error {
-	framesSlice := frames.GetAll()
+func (fc *FramesCollection) ExportJsonReport(file io.Writer) error {
+	framesSlice := fc.GetAll()
 
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "    ")
@@ -111,8 +94,8 @@ func (frames *FramesCollection) ExportJsonReport(file io.Writer) error {
 }
 
 // Write the CSV format frames report to the provided writer which can be a file reference.
-func (frames *FramesCollection) ExportCsvReport(file io.Writer) error {
-	framesSlice := frames.GetAll()
+func (fc *FramesCollection) ExportCsvReport(file io.Writer) error {
+	framesSlice := fc.GetAll()
 
 	csvWriter := csv.NewWriter(file)
 	if err := csvWriter.Write([]string{"Frame", "Brightness", "ColorDifference", "BinaryThresholdDifference"}); err != nil {
