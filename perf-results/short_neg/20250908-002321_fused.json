@@ -1,0 +1,29 @@
+{
+    "metadata": {
+        "run_id": "20250908-002321_fused",
+        "suite": "short_neg",
+        "label": "fused",
+        "commit_sha": "2699bf9",
+        "branch": "feature/perf-pass2",
+        "go_version": "go version go1.22.5 linux/amd64",
+        "ffmpeg_version": "ffmpeg version 7.0.2-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2000-2024 the FFmpeg developers",
+        "os": "linux",
+        "arch": "amd64",
+        "cli_args": "-i resources/samples/sample_no.mp4 -o runs/perf -a -s 0.4 -f",
+        "timestamp_iso": "2025-09-08T00:23:21+02:00"
+    },
+    "timings_ms": {
+        "total_ms": 790.492,
+        "stages_ms": {
+            "auto_thresholds": 0.027,
+            "video_analysis": 788.435,
+            "video_detection": 0.055
+        }
+    },
+    "bench": {
+        "ns_per_op": 803185312,
+        "bytes_per_op": 9664,
+        "allocs_per_op": 26
+    },
+    "detections": 0
+}
