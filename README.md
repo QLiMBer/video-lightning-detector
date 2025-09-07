@@ -135,6 +135,7 @@ Outputs (inside your `-o` directory):
 Tips:
 - Use `-s <0..1]` to trade quality for speed; `0.1–0.5` is typical.
 - Add `-n` to denoise noisy footage and reduce false positives.
+- Add `--no-ui` to disable progress bars/spinners when running long perf jobs.
 
 # Usage
 All available flags/commands:
@@ -159,6 +160,7 @@ Flags:
   -s, --scaling-factor float                          The frame scaling factor used to downscale frames for better performance. (default 0.5)
   -f, --skip-frames-export                            Value indicating if the detected frames should not be exported.
       --quiet-detections                              Suppress per-frame detection Info logs; keep progress bars and final summary.
+      --no-ui                                         Disable UI elements like progress bars/spinners for cleaner performance runs.
   -v, --verbose                                       Enable verbose logging.
 ```
 

@@ -303,7 +303,18 @@ func mustExecuteSuite(suite, runID, label, cliArgs string, opts runOpts) runResu
 }
 
 func runBench(cliArgs string, opts runOpts) benchStats {
-	env := append(os.Environ(), "VLD_CLI_ARGS="+cliArgs)
+	// Ensure quiet, headless runs for the benchmark harness to avoid noisy output and UI overhead.
+	raw := cliArgs
+	if !strings.Contains(" "+raw+" ", " --quiet-detections ") {
+		raw += " --quiet-detections"
+	}
+	if !strings.Contains(" "+raw+" ", " --no-ui ") {
+		raw += " --no-ui"
+	}
+	if !strings.Contains(" "+raw+" ", " -f ") && !strings.Contains(" "+raw+" ", " --skip-frames-export ") {
+		raw += " -f"
+	}
+	env := append(os.Environ(), "VLD_CLI_ARGS="+raw)
 	// Prefer a single iteration to reduce runtime noise; bench harness may still loop b.N internally.
 	args := []string{"test", "-v", "-run", "^$", "-bench", "BenchmarkVideoLightningDetectorFromEnvArgs", "-benchmem", "-count", "1"}
 	cmd := exec.Command("go", args...)
@@ -409,10 +420,24 @@ func runOnceForTimingsAndDetections(cliArgs string, opts runOpts) (timingsReport
 		close(done)
 	}()
 
+	// Heartbeat while the detector runs to indicate liveness on long inputs.
+	start := time.Now()
+	ticker := time.NewTicker(12 * time.Second)
+	defer ticker.Stop()
+loop:
+	for {
+		select {
+		case <-done:
+			break loop
+		case <-ticker.C:
+			if opts.echo {
+				fmt.Fprintf(os.Stderr, "detector: still running (%ds)\n", int(time.Since(start).Seconds()))
+			}
+		}
+	}
 	if err := cmd.Wait(); err != nil {
 		fatalf("detector failed: %v", err)
 	}
-	<-done
 
 	outStr := buf.String()
 	detections := parseDetections(outStr)

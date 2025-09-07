@@ -16,6 +16,7 @@ Purpose: clear guidance to measure performance, compare changes, and identify bo
   - The detector prints a single-line summary `Detections: <N>` at the end of detection for concise counting.
   - Use for automated comparisons and artifact tracking.
   - Quiet detections: `--quiet-detections` hides per-frame positive lines ("Frame meets the threshold requirements.") and the low-value debug line ("Checking frame thresholds."), while keeping failure reasons available under `-v/--verbose`.
+  - Headless runs: `--no-ui` disables progress bars/spinners to reduce terminal I/O and timing noise.
 - End‑to‑end benchmark (Go test)
   - `main_test.go` reads `VLD_CLI_ARGS` and runs the CLI repeatedly; supports quoted paths.
   - Use `-benchmem` and `-count` for stable numbers and allocation stats.
@@ -97,8 +98,8 @@ bin/vld-perf run short_pos --label opt1
 #   --verbose        prints env (VLD_CLI_ARGS) and more context
 #   --quiet          suppresses command echo
 #   --no-stream      disables streaming detector output to your terminal
-# Behavior: vld-perf streams detector output, auto-adds `--quiet-detections`,
-#           and prefers the final `Detections: N` summary when present.
+# Behavior: vld-perf streams detector output, auto-adds `--quiet-detections` and `--no-ui`,
+#           prints a heartbeat during long runs, and prefers the final `Detections: N` summary when present.
 ```
 Shows deltas for: total_ms, analysis_ms, detection_ms, ns/op, B/op, allocs/op.
 
