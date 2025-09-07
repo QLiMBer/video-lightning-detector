@@ -29,13 +29,10 @@ type FramesStatistics struct {
 // TODO: movingMeanResolution validation > 1
 func CreateNewFramesStatistics(frames []*Frame, movingMeanResolution int) *FramesStatistics {
 	var (
-		movingMeanBias                int       = movingMeanResolution / 2
-		brightness                    []float64 = make([]float64, 0, len(frames))
-		colorDiff                     []float64 = make([]float64, 0, len(frames))
-		binaryThresholdDiff           []float64 = make([]float64, 0, len(frames))
-		brightnessMovingMean          []float64 = make([]float64, 0, len(frames))
-		colorDiffMovingMean           []float64 = make([]float64, 0, len(frames))
-		binaryThresholdDiffMovingMean []float64 = make([]float64, 0, len(frames))
+		movingMeanBias      int       = movingMeanResolution / 2
+		brightness          []float64 = make([]float64, 0, len(frames))
+		colorDiff           []float64 = make([]float64, 0, len(frames))
+		binaryThresholdDiff []float64 = make([]float64, 0, len(frames))
 	)
 
 	for _, frame := range frames {
@@ -44,11 +41,10 @@ func CreateNewFramesStatistics(frames []*Frame, movingMeanResolution int) *Frame
 		binaryThresholdDiff = append(binaryThresholdDiff, frame.BinaryThresholdDifference)
 	}
 
-	for index := range frames {
-		brightnessMovingMean = append(brightnessMovingMean, utils.MovingMean(brightness, index, movingMeanBias))
-		colorDiffMovingMean = append(colorDiffMovingMean, utils.MovingMean(colorDiff, index, movingMeanBias))
-		binaryThresholdDiffMovingMean = append(binaryThresholdDiffMovingMean, utils.MovingMean(binaryThresholdDiff, index, movingMeanBias))
-	}
+	// Compute centered moving means in O(n) using prefix sums, clamped at boundaries.
+	brightnessMovingMean := movingMeanCentered(brightness, movingMeanBias)
+	colorDiffMovingMean := movingMeanCentered(colorDiff, movingMeanBias)
+	binaryThresholdDiffMovingMean := movingMeanCentered(binaryThresholdDiff, movingMeanBias)
 
 	return &FramesStatistics{
 		BrightnessMean:                             utils.Mean(brightness),
@@ -64,6 +60,35 @@ func CreateNewFramesStatistics(frames []*Frame, movingMeanResolution int) *Frame
 		BinaryThresholdDifferenceStandardDeviation: utils.StandardDeviation(binaryThresholdDiff),
 		BinaryThresholdDifferenceMax:               utils.Max(binaryThresholdDiff),
 	}
+}
+
+// movingMeanCentered computes a centered moving mean with a given bias (window = 2*bias+1),
+// using prefix sums in O(n). At edges, the window is clamped to available elements.
+func movingMeanCentered(values []float64, bias int) []float64 {
+	n := len(values)
+	if n == 0 {
+		return []float64{}
+	}
+	// Build prefix sums with prefix[0] = 0, prefix[i+1] = sum(values[:i+1])
+	prefix := make([]float64, n+1)
+	for i := 0; i < n; i++ {
+		prefix[i+1] = prefix[i] + values[i]
+	}
+	out := make([]float64, n)
+	for i := 0; i < n; i++ {
+		l := i - bias
+		if l < 0 {
+			l = 0
+		}
+		r := i + bias
+		if r >= n {
+			r = n - 1
+		}
+		sum := prefix[r+1] - prefix[l]
+		count := float64(r - l + 1)
+		out[i] = sum / count
+	}
+	return out
 }
 
 // Write the CSV format statistics report to the provided writer which can be a file reference.

@@ -28,10 +28,8 @@ func BlurImage(src image.Image, dst *image.RGBA, radius int) error {
 		return fmt.Errorf("utils: external image bluring utility failed: %w", err)
 	}
 
-	imgBlurRgba := image.NewRGBA(image.Rect(0, 0, src.Bounds().Dx(), src.Bounds().Dy()))
-	draw.Draw(imgBlurRgba, imgBlurRgba.Bounds(), imgBlur, imgBlur.Bounds().Min, draw.Src)
-
-	copy(dst.Pix, imgBlurRgba.Pix)
+	// Draw directly into dst to avoid intermediate RGBA allocation and copy.
+	draw.Draw(dst, dst.Bounds(), imgBlur, imgBlur.Bounds().Min, draw.Src)
 	return nil
 }
 

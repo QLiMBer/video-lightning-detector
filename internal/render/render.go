@@ -32,8 +32,9 @@ type Renderer interface {
 	Table(data [][]string)
 }
 
-// Create a new renderer instance and specify if verbose debug logging should be enabled
-func CreateRenderer(verbose bool) Renderer {
+// Create a new renderer instance and specify if verbose debug logging should be enabled.
+// When noUI is true, progress bars and spinners are disabled (no-op) to reduce I/O overhead.
+func CreateRenderer(verbose bool, noUI bool) Renderer {
 	pterm.EnableColor()
 	if verbose {
 		pterm.EnableDebugMessages()
@@ -41,11 +42,13 @@ func CreateRenderer(verbose bool) Renderer {
 
 	return &ptermRenderer{
 		verbose: verbose,
+		noUI:    noUI,
 	}
 }
 
 type ptermRenderer struct {
 	verbose bool
+	noUI    bool
 }
 
 func (r *ptermRenderer) LogDebug(format string, a ...any) {
@@ -69,6 +72,10 @@ func (r *ptermRenderer) LogError(format string, a ...any) {
 }
 
 func (r *ptermRenderer) Progress(title string, steps int) (func(), func()) {
+	if r.noUI {
+		// No-op progress in headless mode
+		return func() {}, func() {}
+	}
 	progress, err := pterm.DefaultProgressbar.
 		WithTotal(steps).
 		WithTitle(title).
@@ -94,6 +101,9 @@ func (r *ptermRenderer) Progress(title string, steps int) (func(), func()) {
 }
 
 func (r *ptermRenderer) Spinner(title string) func() {
+	if r.noUI {
+		return func() {}
+	}
 	spinner, err := pterm.DefaultSpinner.
 		WithText(title).
 		WithShowTimer(true).

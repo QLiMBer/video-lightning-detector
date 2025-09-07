@@ -143,7 +143,7 @@ func (detector *detector) performVideoAnalysis(inputVideoPath string) (*frame.Fr
 	progressBarStep, progressBarClose := detector.renderer.Progress("Video analysis stage.", frameCount)
 
 	for video.Read() {
-		if utils.ScaleImage(frameCurrentBuffer, frameCurrent, detector.options.FrameScalingFactor); err != nil {
+		if err := utils.ScaleImage(frameCurrentBuffer, frameCurrent, detector.options.FrameScalingFactor); err != nil {
 			return nil, fmt.Errorf("detector: failed to scale the current frame image on the analyze stage: %w", err)
 		}
 
@@ -207,13 +207,26 @@ func (detector *detector) applyAutoThresholds(framesCollection *frame.FramesColl
 		}
 	}
 
-	gDiffBrightnessValue /= float64(gDiffBrightnessCount)
-	gDiffColorDiffValue /= float64(gDiffColorDiffCount)
-	gDiffBTDiffValue /= float64(gDiffBTDiffCount)
+	// Safely compute means only when counts are non-zero to avoid NaNs.
+	if gDiffBrightnessCount > 0 {
+		gDiffBrightnessValue /= float64(gDiffBrightnessCount)
+	} else {
+		gDiffBrightnessValue = 0
+	}
+	if gDiffColorDiffCount > 0 {
+		gDiffColorDiffValue /= float64(gDiffColorDiffCount)
+	} else {
+		gDiffColorDiffValue = 0
+	}
+	if gDiffBTDiffCount > 0 {
+		gDiffBTDiffValue /= float64(gDiffBTDiffCount)
+	} else {
+		gDiffBTDiffValue = 0
+	}
 
 	defaultOptions := GetDefaultDetectorOptions()
 
-	if defaultOptions.BrightnessDetectionThreshold == defaultOptions.BrightnessDetectionThreshold {
+	if detector.options.BrightnessDetectionThreshold == defaultOptions.BrightnessDetectionThreshold {
 		detector.options.BrightnessDetectionThreshold = gDiffBrightnessValue
 	} else {
 		detector.renderer.LogWarning("The brightness detection threshold (%f) value was explicitly specified and would not be replace by the auto-calculated one (%f)",
@@ -221,7 +234,7 @@ func (detector *detector) applyAutoThresholds(framesCollection *frame.FramesColl
 			gDiffBrightnessValue)
 	}
 
-	if defaultOptions.ColorDifferenceDetectionThreshold == defaultOptions.ColorDifferenceDetectionThreshold {
+	if detector.options.ColorDifferenceDetectionThreshold == defaultOptions.ColorDifferenceDetectionThreshold {
 		detector.options.ColorDifferenceDetectionThreshold = gDiffColorDiffValue
 	} else {
 		detector.renderer.LogWarning("The color difference detection threshold (%f) value was explicitly specified and would not be replace by the auto-calculated one (%f)",
@@ -229,7 +242,7 @@ func (detector *detector) applyAutoThresholds(framesCollection *frame.FramesColl
 			gDiffColorDiffValue)
 	}
 
-	if defaultOptions.BinaryThresholdDifferenceDetectionThreshold == defaultOptions.BinaryThresholdDifferenceDetectionThreshold {
+	if detector.options.BinaryThresholdDifferenceDetectionThreshold == defaultOptions.BinaryThresholdDifferenceDetectionThreshold {
 		detector.options.BinaryThresholdDifferenceDetectionThreshold = gDiffBTDiffValue
 	} else {
 		detector.renderer.LogWarning("The binary threshold detection threshold (%f) value was explicitly specified and would not be replace by the auto-calculated one (%f)",

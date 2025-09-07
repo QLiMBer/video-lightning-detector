@@ -21,6 +21,7 @@ var (
 	InputVideoPath      string
 	OutputDirectoryPath string
 	VerboseMode         bool
+	NoUIMode            bool
 	DetectorOptions     detector.DetectorOptions = detector.GetDefaultDetectorOptions()
 )
 
@@ -34,6 +35,7 @@ func init() {
 	rootCmd.MarkPersistentFlagRequired("output-directory-path")
 
 	rootCmd.PersistentFlags().BoolVarP(&VerboseMode, "verbose", "v", false, "Enable verbose logging.")
+	rootCmd.PersistentFlags().BoolVar(&NoUIMode, "no-ui", false, "Disable UI elements like progress bars/spinners for cleaner performance runs.")
 
 	rootCmd.PersistentFlags().BoolVarP(
 		&DetectorOptions.AutoThresholds,
@@ -131,7 +133,7 @@ func run(cmd *cobra.Command, args []string) error {
 		}
 	}()
 
-	renderer := render.CreateRenderer(VerboseMode)
+	renderer := render.CreateRenderer(VerboseMode, NoUIMode)
 	detectorInstance, err := detector.CreateDetector(renderer, DetectorOptions)
 	if err != nil {
 		return fmt.Errorf("cmd: failed to create the detector instance: %w", err)

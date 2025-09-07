@@ -378,6 +378,9 @@ func runOnceForTimingsAndDetections(cliArgs string, opts runOpts) (timingsReport
 	if !hasArg(args, "--quiet-detections") {
 		args = append(args, "--quiet-detections")
 	}
+	if !hasArg(args, "--no-ui") {
+		args = append(args, "--no-ui")
+	}
 
 	bin := filepath.Join(".", "bin", "video-lightning-detector")
 	if opts.echo {
