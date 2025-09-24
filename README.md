@@ -257,3 +257,8 @@ Here's an example of graphs generated using the exported CSV report. The graphs 
 ![Example graph brightness](https://raw.githubusercontent.com/Krzysztofz01/video-lightning-detector/development/resources/example-graph-brightness.png)
 ![Example graph colordiff](https://raw.githubusercontent.com/Krzysztofz01/video-lightning-detector/development/resources/example-graph-colordiff.png)
 ![Example graph btdiff](https://raw.githubusercontent.com/Krzysztofz01/video-lightning-detector/development/resources/example-graph-btdiff.png)
+
+## Related reading
+
+- Lightning strikes and Python (OpenCV motion-based detection and CSV export) — [lukse.lt](https://lukse.lt/uzrasai/2015-05-lightning-strikes-and-python/?utm_source=chatgpt.com)
+- Extracting Lightning Strikes From HD Video — [Hackaday](https://hackaday.com/2015/05/11/extracting-lightning-strikes-from-hd-video/?utm_source=chatgpt.com)
